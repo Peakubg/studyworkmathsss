@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">Google Docs</title>
+<link rel="icon" id="pageFavicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ac: #6c63ff;
+  --ac2: #a78bfa;
+  --ac-glow: rgba(108,99,255,0.35);
+  --ac-soft: rgba(108,99,255,0.12);
+  --bg: #080a12;
+  --sb: #0d1020;
+  --surf: #111526;
+  --surf2: #161c30;
+  --surf3: #1c2440;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e2e8ff;
+  --text2: #7a8ab0;
+  --text3: #3d4d6e;
+  --white: #fff;
+  --green: #22d3a5;
+  --red: #ff4d6a;
+  --yellow: #fbbf24;
+  --sw: 248px;
+  --shadow: 0 8px 40px rgba(0,0,0,0.6);
+  --card-r: 16px;
+}
+[data-theme="light"] {
+  --bg: #f0f2fa; --sb: #fff; --surf: #fff; --surf2: #f5f6fd; --surf3: #e8ebf8;
+  --border: rgba(0,0,0,0.06); --border2: rgba(0,0,0,0.12);
+  --text: #12172e; --text2: #4a5580; --text3: #9aa3c2;
+}
+[data-theme="oled"] {
+  --bg: #000; --sb: #050505; --surf: #080808; --surf2: #0e0e0e; --surf3: #151515;
+  --border: rgba(255,255,255,0.04); --border2: rgba(255,255,255,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:99px}
+
+/* STEALTH */
+#stealth{
+  position:fixed;inset:0;z-index:9000;background:#f8f9fa;
+  font-family:'Segoe UI',Arial,sans-serif;color:#202124;
+  display:flex;flex-direction:column;
+}
+.st-bar{
+  background:#fff;border-bottom:1px solid #e8eaed;
+  padding:8px 18px;display:flex;align-items:center;gap:14px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+.st-brand{display:flex;align-items:center;gap:9px;font-size:19px;color:#5f6368}
+.st-tools{display:flex;gap:4px;margin-left:auto}
+.st-tool{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#5f6368;font-size:16px;cursor:default;transition:background .15s}
+.st-tool:hover{background:#f1f3f4}
+.st-doc{max-width:816px;margin:0 auto;padding:56px 72px;width:100%;flex:1;overflow-y:auto;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.1);margin-top:16px;margin-bottom:16px;border-radius:4px}
+.st-title{font-size:26px;font-weight:400;margin-bottom:28px;color:#202124}
+.st-p{font-size:11pt;line-height:1.9;margin-bottom:18px;color:#202124}
+.st-hint{position:fixed;bottom:14px;right:18px;font-size:11px;color:#ccc;user-select:none}
+
+/* CANVAS BG */
+#bgCv{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* SHELL */
+#shell{position:fixed;inset:0;z-index:100;display:none}
+
+/* SIDEBAR */
+.sidebar{
+  position:absolute;left:0;top:0;bottom:0;width:var(--sw);
+  background:var(--sb);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:20;
+}
+.sb-header{
+  display:flex;align-items:center;gap:12px;
+  padding:22px 18px 18px;border-bottom:1px solid var(--border);
+}
+.sb-mark{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--ac),var(--ac2));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 18px var(--ac-glow);flex-shrink:0;
+}
+.sb-brand{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--white);letter-spacing:.5px}
+.sb-brand em{font-style:normal;color:var(--ac2)}
+.sb-version{font-size:10px;color:var(--text3);margin-top:1px;font-family:'JetBrains Mono',monospace}
+.sb-body{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.sb-label{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text3);padding:10px 10px 5px}
+.sb-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border-radius:10px;color:var(--text2);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .15s;user-select:none;
+}
+.sb-item:hover{background:var(--surf);color:var(--text)}
+.sb-item.on{background:var(--ac-soft);color:var(--ac2);font-weight:600}
+.sb-item.on .sb-ico{filter:drop-shadow(0 0 6px var(--ac))}
+.sb-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-badge{
+  margin-left:auto;min-width:20px;text-align:center;
+  background:rgba(108,99,255,0.2);color:var(--ac2);
+  font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;
+  font-family:'JetBrains Mono',monospace;
+}
+.sb-sep{height:1px;background:var(--border);margin:6px 4px}
+.sb-foot{padding:12px 10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.sb-status{
+  display:flex;align-items:center;gap:9px;background:var(--surf);
+  border:1px solid var(--border);border-radius:10px;padding:9px 12px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0}
+.dot.off{background:var(--red);box-shadow:0 0 8px var(--red)}
+.sb-status-txt{font-size:12px;color:var(--text2);flex:1}
+#sbClock{font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.sb-panic{
+  width:100%;padding:9px;background:rgba(255,77,106,0.08);
+  border:1px solid rgba(255,77,106,0.22);border-radius:10px;
+  color:var(--red);font-size:13px;font-weight:600;transition:all .15s;
+}
+.sb-panic:hover{background:rgba(255,77,106,0.18);transform:translateY(-1px)}
+
+/* MAIN */
+.main{position:absolute;left:var(--sw);right:0;top:0;bottom:0;display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  height:58px;flex-shrink:0;display:flex;align-items:center;
+  padding:0 26px;gap:14px;background:var(--bg);border-bottom:1px solid var(--border);
+}
+.tb-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
+.tb-sub{font-size:11px;color:var(--text3);margin-top:1px;font-family:'JetBrains Mono',monospace}
+.search{
+  margin-left:auto;display:flex;align-items:center;gap:8px;
+  background:var(--surf);border:1px solid var(--border2);
+  border-radius:12px;padding:7px 14px;width:220px;transition:all .2s;
+}
+.search:focus-within{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft);width:280px}
+.search svg{color:var(--text3);flex-shrink:0}
+.search input{background:none;border:none;outline:none;color:var(--text);font-size:13px;width:100%}
+.search input::placeholder{color:var(--text3)}
+.tb-btn{
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  background:var(--surf);border:1px solid var(--border);border-radius:10px;
+  color:var(--text2);font-size:14px;transition:all .15s;
+}
+.tb-btn:hover{background:var(--surf2);color:var(--text);border-color:var(--border2)}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 26px}
+.panel{display:none}
+.panel.on{display:block}
+
+/* WELCOME */
+.welcome{
+  display:flex;align-items:center;gap:20px;
+  background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(167,139,250,.05));
+  border:1px solid rgba(108,99,255,.2);border-radius:20px;
+  padding:24px 28px;margin-bottom:28px;position:relative;overflow:hidden;
+}
+.welcome::before{
+  content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;
+  background:radial-gradient(circle,rgba(108,99,255,.12) 0%,transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.w-avatar{
+  width:52px;height:52px;border-radius:16px;
+  background:linear-gradient(135deg,var(--ac),var(--ac2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;flex-shrink:0;box-shadow:0 4px 20px var(--ac-glow);
+}
+.w-text h2{font-family:'Syne',sans-serif;font-size:19px;font-weight:700}
+.w-text p{font-size:12px;color:var(--text2);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.w-stats{margin-left:auto;display:flex;gap:28px}
+.stat{text-align:center}
+.stat-n{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--ac2)}
+.stat-l{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.8px}
+
+/* SECTION HEAD */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;margin-top:26px}
+.sh:first-child{margin-top:0}
+.sh-label{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--text3)}
+.sh-link{font-size:12px;color:var(--ac2);padding:4px 10px;border-radius:8px;transition:background .15s}
+.sh-link:hover{background:var(--ac-soft)}
+
+/* CARD GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:8px}
+
+/* ── BEAUTIFUL NEW CARDS ── */
+.card{
+  background:var(--surf);
+  border:1px solid var(--border);
+  border-radius:var(--card-r);
+  overflow:hidden;cursor:pointer;
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+  position:relative;
+}
+.card::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.03),transparent);
+  pointer-events:none;
+}
+.card:hover{
+  transform:translateY(-5px) scale(1.01);
+  box-shadow:0 16px 48px rgba(0,0,0,0.5),0 0 0 1px var(--border2);
+  border-color:rgba(108,99,255,.3);
+}
+.card:active{transform:translateY(-2px) scale(1.005)}
+.card-thumb{
+  height:110px;display:flex;align-items:center;justify-content:center;
+  font-size:48px;position:relative;overflow:hidden;
+}
+.card-thumb::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,0.35));
+}
+.card-glow{
+  position:absolute;width:80px;height:80px;border-radius:50%;
+  filter:blur(24px);opacity:0.5;pointer-events:none;
+  transition:opacity .3s;
+}
+.card:hover .card-glow{opacity:0.8}
+.card-chip{
+  position:absolute;top:10px;right:10px;z-index:2;
+  background:rgba(0,0,0,0.55);backdrop-filter:blur(10px);
+  color:rgba(255,255,255,0.9);font-size:9px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 8px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);
+}
+.card-body{padding:12px 14px 0}
+.card-name{
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+  color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.card-desc{font-size:11px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px 13px;
+}
+.card-tag{
+  font-size:10px;font-weight:600;letter-spacing:.5px;
+  color:var(--ac2);background:var(--ac-soft);
+  padding:3px 9px;border-radius:20px;
+}
+.play-btn{
+  width:32px;height:32px;border-radius:10px;
+  background:linear-gradient(135deg,var(--ac),var(--ac2));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:13px;box-shadow:0 4px 14px var(--ac-glow);
+  transition:transform .15s,box-shadow .15s;
+}
+.card:hover .play-btn{transform:scale(1.12);box-shadow:0 6px 20px var(--ac-glow)}
+
+/* THUMB GRADIENTS */
+.g0{background:linear-gradient(135deg,#1a1035,#0a1428)}
+.g1{background:linear-gradient(135deg,#200a35,#100520)}
+.g2{background:linear-gradient(135deg,#35100a,#200508)}
+.g3{background:linear-gradient(135deg,#0a2535,#041518)}
+.g4{background:linear-gradient(135deg,#1e2800,#0f1400)}
+.g5{background:linear-gradient(135deg,#002520,#001510)}
+.g6{background:linear-gradient(135deg,#30051a,#18020d)}
+.g7{background:linear-gradient(135deg,#0a0520,#050210)}
+.g8{background:linear-gradient(135deg,#25100a,#150500)}
+
+/* RECENTS */
+.li{
+  display:flex;align-items:center;gap:13px;padding:12px 14px;
+  background:var(--surf);border:1px solid var(--border);
+  border-radius:12px;margin-bottom:7px;cursor:pointer;transition:all .15s;
+}
+.li:hover{background:var(--surf2);border-color:var(--border2);transform:translateX(3px)}
+.li-icon{width:38px;height:38px;border-radius:10px;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.li-name{font-size:14px;font-weight:600;color:var(--text)}
+.li-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.li-time{margin-left:auto;font-size:11px;color:var(--text3);flex-shrink:0;font-family:'JetBrains Mono',monospace}
+
+/* SETTINGS */
+.settings-wrap{max-width:660px}
+.sc{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:20px 22px;margin-bottom:14px}
+.sc-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px}
+.sr{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.sr:last-child{border-bottom:none;padding-bottom:0}
+.sr-l{flex:1;padding-right:16px}
+.sr-label{font-size:13px;font-weight:500;color:var(--text)}
+.sr-hint{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* TOGGLE */
+.tog{position:relative;width:44px;height:24px;cursor:pointer;flex-shrink:0;display:block}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.tog-tr{position:absolute;inset:0;background:var(--surf3);border-radius:12px;transition:background .2s}
+.tog-th{position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.tog input:checked~.tog-tr{background:var(--ac)}
+.tog input:checked~.tog-tr~.tog-th{left:23px}
+
+/* PILLS */
+.pills{display:flex;gap:7px;flex-wrap:wrap}
+.pill{padding:6px 15px;border-radius:20px;border:1px solid var(--border2);background:var(--surf2);color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.pill:hover{border-color:var(--ac);color:var(--ac2)}
+.pill.on{background:var(--ac);border-color:var(--ac);color:#fff}
+
+/* INPUTS */
+.sel,.inp{
+  background:var(--surf2);border:1px solid var(--border2);border-radius:10px;
+  color:var(--text);font-family:inherit;font-size:13px;padding:7px 12px;outline:none;
+}
+.sel{cursor:pointer;min-width:180px}
+.sel option{background:var(--surf)}
+.inp{width:100%;margin-top:10px;transition:border-color .15s}
+.inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;transition:all .15s;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn-p{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;box-shadow:0 4px 14px var(--ac-glow)}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--ac-glow)}
+.btn-g{background:var(--surf2);color:var(--text2);border:1px solid var(--border2)}
+.btn-g:hover{background:var(--surf3);color:var(--text)}
+.btn-d{background:rgba(255,77,106,.08);color:var(--red);border:1px solid rgba(255,77,106,.2)}
+.btn-d:hover{background:rgba(255,77,106,.18)}
+
+/* KBD */
+.kbd{display:inline-flex;align-items:center;gap:5px}
+.key{background:var(--surf2);border:1px solid var(--border2);border-radius:6px;font-size:11px;font-weight:600;padding:2px 8px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+
+/* ──────── IFRAME ──────── */
+#ifl{position:fixed;inset:0;z-index:500;display:none;background:#000}
+#ifl iframe{width:100%;height:100%;border:none;display:block}
+#hz{position:fixed;top:0;left:0;right:0;height:10px;z-index:501;display:none}
+#fbar{
+  position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-100%);
+  z-index:502;height:50px;
+  display:flex;align-items:center;gap:6px;
+  background:rgba(8,10,18,0.96);backdrop-filter:blur(24px);
+  border:1px solid var(--border2);border-top:none;
+  border-radius:0 0 18px 18px;padding:0 14px;
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 12px 40px rgba(0,0,0,.7);min-width:420px;
+}
+#fbar.up{transform:translateX(-50%) translateY(0)}
+.fb{
+  display:flex;align-items:center;gap:5px;padding:5px 12px;
+  border-radius:8px;background:var(--surf);border:1px solid var(--border);
+  color:var(--text2);font-size:12px;font-weight:600;transition:all .15s;cursor:pointer;
+}
+.fb:hover{background:var(--surf2);color:var(--text);border-color:var(--border2)}
+.fb.acc:hover{background:var(--ac-soft);color:var(--ac2);border-color:rgba(108,99,255,.3)}
+.fb.dng:hover{background:rgba(255,77,106,.1);color:var(--red);border-color:rgba(255,77,106,.3)}
+.fb.rec-active{background:rgba(255,77,106,.15);color:var(--red);border-color:rgba(255,77,106,.3)}
+.fb-url{flex:1;min-width:0;font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;font-family:'JetBrains Mono',monospace}
+.fdiv{width:1px;height:20px;background:var(--border)}
+
+/* ──────── GAME HUD OVERLAY ──────── */
+#hud{
+  position:fixed;right:18px;top:18px;z-index:600;
+  display:none;flex-direction:column;gap:8px;
+  width:220px;
+  transition:opacity .3s,transform .3s;
+}
+#hud.hidden{opacity:0;pointer-events:none;transform:translateX(240px)}
+#hud-toggle{
+  position:fixed;right:18px;top:18px;z-index:601;display:none;
+  width:38px;height:38px;border-radius:12px;
+  background:rgba(8,10,18,0.85);backdrop-filter:blur(16px);
+  border:1px solid var(--border2);color:var(--text2);font-size:16px;
+  transition:all .15s;
+}
+#hud-toggle:hover{background:rgba(108,99,255,0.2);color:var(--ac2);border-color:rgba(108,99,255,.4)}
+#hud-toggle.shifted{right:248px}
+
+.hud-card{
+  background:rgba(8,10,18,0.88);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.1);border-radius:16px;
+  padding:14px;overflow:hidden;position:relative;
+}
+.hud-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
+}
+
+/* Clock card */
+.hud-clock{text-align:center;padding:16px 14px}
+.hud-time{font-family:'Syne',sans-serif;font-size:38px;font-weight:800;color:var(--white);line-height:1;letter-spacing:-1px}
+.hud-date{font-size:11px;color:var(--text2);margin-top:6px;font-family:'JetBrains Mono',monospace}
+
+/* Battery card */
+.hud-battery-wrap{display:flex;align-items:center;gap:10px}
+.batt-icon{position:relative;width:40px;height:20px;border:2px solid rgba(255,255,255,0.4);border-radius:4px;flex-shrink:0}
+.batt-icon::after{content:'';position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:4px;height:10px;background:rgba(255,255,255,0.4);border-radius:0 2px 2px 0}
+.batt-fill{position:absolute;left:2px;top:2px;bottom:2px;border-radius:2px;background:var(--green);transition:width .5s}
+.batt-fill.warn{background:var(--yellow)}
+.batt-fill.crit{background:var(--red)}
+.batt-info{flex:1}
+.batt-pct{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--white)}
+.batt-status{font-size:10px;color:var(--text2);margin-top:2px;font-family:'JetBrains Mono',monospace}
+
+/* Spotify card */
+.spotify-card{}
+.sp-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sp-logo{font-size:18px}
+.sp-label{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#1DB954}
+.sp-track{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sp-art{
+  width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden;
+  background:linear-gradient(135deg,#1DB954,#145c32);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.sp-art img{width:100%;height:100%;object-fit:cover}
+.sp-meta{flex:1;min-width:0}
+.sp-song{font-size:13px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-artist{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-progress{height:3px;background:rgba(255,255,255,0.15);border-radius:2px;margin-bottom:10px;position:relative;cursor:pointer}
+.sp-prog-fill{height:100%;background:#1DB954;border-radius:2px;transition:width .8s linear;position:relative}
+.sp-prog-fill::after{content:'';position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:10px;height:10px;background:#fff;border-radius:50%;opacity:0;transition:opacity .15s}
+.sp-progress:hover .sp-prog-fill::after{opacity:1}
+.sp-controls{display:flex;align-items:center;justify-content:center;gap:12px}
+.sp-btn{
+  background:none;border:none;color:rgba(255,255,255,0.6);font-size:16px;
+  cursor:pointer;padding:4px;border-radius:6px;transition:all .15s;display:flex;align-items:center;
+}
+.sp-btn:hover{color:#fff;background:rgba(255,255,255,0.1)}
+.sp-btn.play-pause{
+  width:36px;height:36px;border-radius:50%;
+  background:#1DB954;color:#000;font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(29,185,84,0.4);
+}
+.sp-btn.play-pause:hover{background:#23e65b;transform:scale(1.08)}
+.sp-time{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace}
+.sp-vol{display:flex;align-items:center;gap:6px;margin-top:10px}
+.sp-vol-icon{font-size:13px;color:var(--text3)}
+.sp-vol-slider{flex:1;height:3px;background:rgba(255,255,255,0.15);border-radius:2px;position:relative;cursor:pointer}
+.sp-vol-fill{height:100%;background:#1DB954;border-radius:2px;width:70%}
+
+/* Screenshot/Rec card */
+.tools-card{}
+.tools-row{display:flex;gap:8px}
+.tool-btn{
+  flex:1;padding:10px 6px;border-radius:10px;
+  background:var(--surf2);border:1px solid var(--border);
+  color:var(--text2);font-size:20px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  transition:all .2s;cursor:pointer;
+}
+.tool-btn span{font-size:10px;font-weight:600;letter-spacing:.3px;color:var(--text3)}
+.tool-btn:hover{background:var(--surf3);color:var(--text);border-color:var(--border2)}
+.tool-btn.recording{background:rgba(255,77,106,.15);border-color:rgba(255,77,106,.3);color:var(--red)}
+.tool-btn.recording span{color:var(--red)}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:22px;left:50%;
+  transform:translateX(-50%) translateY(8px);
+  background:var(--surf);border:1px solid var(--border2);border-radius:12px;
+  padding:10px 22px;font-size:13px;color:var(--text2);z-index:9999;
+  pointer-events:none;opacity:0;transition:all .25s;box-shadow:var(--shadow);
+  white-space:nowrap;font-family:'Space Grotesk',sans-serif;
+}
+#toast.up{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.success{border-color:rgba(34,211,165,.3);color:var(--green)}
+#toast.error{border-color:rgba(255,77,106,.3);color:var(--red)}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .ei{font-size:40px;margin-bottom:14px}
+.empty p{font-size:13px}
+
+/* ANIMS */
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fu .38s ease forwards;opacity:0}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulsing{animation:pulse 1.2s ease infinite}
+
+/* Screenshot flash */
+#flash{position:fixed;inset:0;z-index:9999;background:#fff;opacity:0;pointer-events:none;transition:opacity .1s}
+</style>
+</head>
+<body>
+<canvas id="bgCv"></canvas>
+
+<!-- STEALTH -->
+<div id="stealth">
+  <div class="st-bar">
+    <div class="st-brand">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#4285f4" stroke-width="1.5"/>
+        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="#4285f4" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Google Docs
+    </div>
+    <div class="st-tools">
+      <div class="st-tool">🖨</div><div class="st-tool">📎</div><div class="st-tool">☁</div>
+    </div>
+  </div>
+  <div class="st-doc">
+    <div class="st-title">Chapter 5: Digital Citizenship and Responsible Technology Use</div>
+    <p class="st-p">In today's interconnected world, understanding how to navigate the internet safely and responsibly is a crucial life skill. Digital citizenship encompasses not only technical proficiency but also ethical awareness, information literacy, and an understanding of how our online actions affect others in our communities and beyond.</p>
+    <p class="st-p">Online safety involves several key principles: protecting personal information, understanding privacy settings, recognizing and avoiding phishing attempts, and maintaining healthy boundaries between screen time and offline activities. Students should be aware that their digital footprint is permanent and can have lasting consequences on their academic and professional futures.</p>
+    <p class="st-p">Information literacy — the ability to find, evaluate, and use information effectively — is equally important. With the rise of misinformation, developing critical thinking skills to assess source credibility, check facts across multiple reputable sources, and understand the difference between primary and secondary sources has never been more essential in today's digital landscape.</p>
+    <p class="st-p">Cyberbullying, digital privacy, and intellectual property rights are additional areas where students need education and guidance. Understanding copyright law, fair use, Creative Commons licenses, and academic integrity policies helps create responsible creators and consumers of digital content.</p>
+    <p class="st-p">Discussion Questions: (1) How do social media algorithms affect the news and content you see daily? (2) What steps can you take to verify information before sharing it online? (3) How does your digital footprint affect future opportunities?</p>
+  </div>
+  <div class="st-hint">Shift + P</div>
+</div>
+
+<!-- SHELL -->
+<div id="shell">
+  <nav class="sidebar">
+    <div class="sb-header">
+      <div class="sb-mark">
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L17 16H3L10 2Z" fill="white" opacity=".95"/>
+          <path d="M10 7.5L13 14H7L10 7.5Z" fill="white" opacity=".35"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sb-brand">Pe<em>a</em>k</div>
+        <div class="sb-version">v3.0 · dashboard</div>
+      </div>
+    </div>
+    <div class="sb-body">
+      <div class="sb-label">Navigate</div>
+      <div class="sb-item on" id="ni-home" onclick="goNav('home',this)"><span class="sb-ico">⊞</span>Home</div>
+      <div class="sb-item" id="ni-games" onclick="goNav('games',this)"><span class="sb-ico">🎮</span>Games<span class="sb-badge" id="gbadge">0</span></div>
+      <div class="sb-item" id="ni-proxy" onclick="goNav('proxy',this)"><span class="sb-ico">🌐</span>Proxies<span class="sb-badge" id="pbadge">0</span></div>
+      <div class="sb-item" id="ni-apps" onclick="goNav('apps',this)"><span class="sb-ico">📱</span>Apps</div>
+      <div class="sb-item" id="ni-recents" onclick="goNav('recents',this)"><span class="sb-ico">🕑</span>Recent</div>
+      <div class="sb-sep"></div>
+      <div class="sb-label">System</div>
+      <div class="sb-item" id="ni-settings" onclick="goNav('settings',this)"><span class="sb-ico">⚙️</span>Settings</div>
+      <div class="sb-item" id="ni-keys" onclick="goNav('keys',this)"><span class="sb-ico">⌨️</span>Shortcuts</div>
+    </div>
+    <div class="sb-foot">
+      <div class="sb-status">
+        <div class="dot" id="proxyDot"></div>
+        <div class="sb-status-txt">System Online</div>
+        <div id="sbClock">--:--</div>
+      </div>
+      <button class="sb-panic" onclick="panic()">⚡ Panic Redirect</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="tb-title" id="tbTitle">Home</div>
+        <div class="tb-sub" id="tbSub">Welcome to Peak</div>
+      </div>
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="srch" placeholder="Search…" oninput="doSearch(this.value)">
+      </div>
+    </div>
+
+    <div class="content" id="content">
+
+      <!-- HOME -->
+      <div class="panel on" id="p-home">
+        <div class="welcome fu">
+          <div class="w-avatar">🏔</div>
+          <div class="w-text">
+            <h2 id="greetTxt">Welcome back</h2>
+            <p id="dateStr">Loading…</p>
+          </div>
+          <div class="w-stats">
+            <div class="stat"><div class="stat-n" id="sSes">0</div><div class="stat-l">Sessions</div></div>
+            <div class="stat"><div class="stat-n" id="sTime">0m</div><div class="stat-l">Play time</div></div>
+            <div class="stat"><div class="stat-n" id="sVis">0</div><div class="stat-l">Visited</div></div>
+          </div>
+        </div>
+        <div class="fu d1">
+          <div class="sh"><div class="sh-label">Quick Play</div><button class="sh-link btn" onclick="goNav('games',document.getElementById('ni-games'))">See all →</button></div>
+          <div class="grid" id="hgames"></div>
+          <div class="empty" id="hgEmpty" style="display:none"><div class="ei">🎮</div><p>No games yet — send your game files!</p></div>
+        </div>
+        <div class="fu d2">
+          <div class="sh"><div class="sh-label">Proxy Hub</div><button class="sh-link btn" onclick="goNav('proxy',document.getElementById('ni-proxy'))">See all →</button></div>
+          <div class="grid" id="hproxy"></div>
+          <div class="empty" id="hpEmpty" style="display:none"><div class="ei">🌐</div><p>No proxies yet</p></div>
+        </div>
+      </div>
+
+      <!-- GAMES -->
+      <div class="panel" id="p-games">
+        <div class="sh fu"><div class="sh-label" id="glabel">All Games</div></div>
+        <div class="grid" id="agames"></div>
+        <div class="empty" id="gempty"><div class="ei">🎮</div><p>No games yet — send your game files!</p></div>
+      </div>
+
+      <!-- PROXIES -->
+      <div class="panel" id="p-proxy">
+        <div class="sh fu"><div class="sh-label" id="plabel">Proxy Hub</div></div>
+        <div class="grid" id="aproxy"></div>
+        <div class="empty" id="pempty"><div class="ei">🌐</div><p>No proxies configured</p></div>
+      </div>
+
+      <!-- APPS -->
+      <div class="panel" id="p-apps">
+        <div class="sh fu"><div class="sh-label">Applications</div></div>
+        <div class="grid" id="aapps"></div>
+      </div>
+
+      <!-- RECENTS -->
+      <div class="panel" id="p-recents">
+        <div class="sh fu">
+          <div class="sh-label">Recent Sessions</div>
+          <button class="btn btn-g" style="font-size:12px;padding:5px 12px" onclick="clearRec()">Clear all</button>
+        </div>
+        <div id="recList"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="panel" id="p-settings">
+        <div class="settings-wrap">
+          <div class="sc fu">
+            <div class="sc-title">Appearance</div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Theme</div><div class="sr-hint">Color scheme</div></div>
+              <div class="pills">
+                <div class="pill on" onclick="setTheme('dark',this)">Dark</div>
+                <div class="pill" onclick="setTheme('light',this)">Light</div>
+                <div class="pill" onclick="setTheme('oled',this)">OLED</div>
+              </div>
+            </div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Ambient background</div><div class="sr-hint">Particle mesh effect</div></div>
+              <label class="tog"><input type="checkbox" id="tBg" checked onchange="togBg(this)"><span class="tog-tr"></span><span class="tog-th"></span></label>
+            </div>
+          </div>
+          <div class="sc fu d1">
+            <div class="sc-title">Tab Masking</div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Tab title &amp; icon</div><div class="sr-hint">What appears in the browser tab</div></div>
+              <select class="sel" id="maskSel" onchange="applyMask()">
+                <option value="peak">Peak Dashboard</option>
+                <option value="gdocs">Google Docs</option>
+                <option value="canvas">Canvas — Courses</option>
+                <option value="classroom">Google Classroom</option>
+                <option value="khan">Khan Academy</option>
+                <option value="custom">Custom…</option>
+              </select>
+            </div>
+            <div id="customWrap" style="display:none;padding-top:10px">
+              <input class="inp" type="text" id="customTitle" placeholder="Enter custom title…">
+              <button class="btn btn-p" style="margin-top:10px;width:100%" onclick="applyCustom()">Apply</button>
+            </div>
+          </div>
+          <div class="sc fu d2">
+            <div class="sc-title">Game HUD</div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Show clock overlay</div><div class="sr-hint">Display time while playing</div></div>
+              <label class="tog"><input type="checkbox" id="tHudClock" checked><span class="tog-tr"></span><span class="tog-th"></span></label>
+            </div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Show Spotify overlay</div><div class="sr-hint">Mini music player during games</div></div>
+              <label class="tog"><input type="checkbox" id="tHudSpotify" checked><span class="tog-tr"></span><span class="tog-th"></span></label>
+            </div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Show battery overlay</div><div class="sr-hint">Battery level during games</div></div>
+              <label class="tog"><input type="checkbox" id="tHudBatt" checked><span class="tog-tr"></span><span class="tog-th"></span></label>
+            </div>
+          </div>
+          <div class="sc fu d3">
+            <div class="sc-title">Danger Zone</div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Clear history</div><div class="sr-hint">Remove all session data &amp; stats</div></div>
+              <button class="btn btn-g" onclick="clearRec()">Clear</button>
+            </div>
+            <div class="sr">
+              <div class="sr-l"><div class="sr-label">Panic redirect</div><div class="sr-hint">Instantly go to Google Classroom</div></div>
+              <button class="btn btn-d" onclick="panic()">⚡ Panic</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHORTCUTS -->
+      <div class="panel" id="p-keys">
+        <div class="settings-wrap">
+          <div class="sc fu">
+            <div class="sc-title">Keyboard Shortcuts</div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Reveal dashboard</div></div><div class="kbd"><span class="key">Shift</span><span class="key">P</span></div></div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Panic redirect</div></div><div class="kbd"><span class="key">Esc</span></div></div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Focus search</div></div><div class="kbd"><span class="key">Ctrl</span><span class="key">K</span></div></div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Close game / back</div></div><div class="kbd"><span class="key">Alt</span><span class="key">←</span></div></div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Toggle HUD</div></div><div class="kbd"><span class="key">Alt</span><span class="key">H</span></div></div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Screenshot</div></div><div class="kbd"><span class="key">Alt</span><span class="key">S</span></div></div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Toggle recording</div></div><div class="kbd"><span class="key">Alt</span><span class="key">R</span></div></div>
+            <div class="sr"><div class="sr-l"><div class="sr-label">Open settings</div></div><div class="kbd"><span class="key">Alt</span><span class="key">O</span></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- IFRAME -->
+<div id="ifl">
+  <iframe id="iframe" src="about:blank" allowfullscreen allow="fullscreen;autoplay;clipboard-write"></iframe>
+</div>
+<div id="hz" onmouseenter="showBar()"></div>
+<div id="fbar" onmouseleave="hideBar()">
+  <button class="fb acc" onclick="closeProxy()">← Back</button>
+  <div class="fdiv"></div>
+  <button class="fb" onclick="reloadProxy()">↻</button>
+  <span class="fb-url" id="furl">—</span>
+  <div class="fdiv"></div>
+  <button class="fb" id="recBtn" onclick="toggleRec()" title="Record">⏺</button>
+  <button class="fb" onclick="takeScreenshot()" title="Screenshot">📷</button>
+  <button class="fb" onclick="togImmerse()" title="Immerse">⛶</button>
+  <div class="fdiv"></div>
+  <button class="fb dng" onclick="panic()">⚡</button>
+</div>
+
+<!-- GAME HUD -->
+<button id="hud-toggle" onclick="toggleHud()" title="Toggle HUD (Alt+H)">◀</button>
+
+<div id="hud">
+  <!-- Clock -->
+  <div class="hud-card hud-clock">
+    <div class="hud-time" id="hudTime">--:--</div>
+    <div class="hud-date" id="hudDate">—</div>
+  </div>
+
+  <!-- Battery -->
+  <div class="hud-card" id="hudBattCard">
+    <div class="hud-battery-wrap">
+      <div class="batt-icon">
+        <div class="batt-fill" id="battFill" style="width:70%"></div>
+      </div>
+      <div class="batt-info">
+        <div class="batt-pct" id="battPct">—</div>
+        <div class="batt-status" id="battStatus">checking…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spotify -->
+  <div class="hud-card spotify-card" id="hudSpotCard">
+    <div class="sp-header">
+      <span class="sp-logo">♫</span>
+      <span class="sp-label">Spotify</span>
+      <button class="sp-btn" onclick="openSpotifyAuth()" style="margin-left:auto;font-size:11px;color:var(--text3)" title="Connect Spotify">🔗</button>
+    </div>
+    <div class="sp-track">
+      <div class="sp-art" id="spArt">♪</div>
+      <div class="sp-meta">
+        <div class="sp-song" id="spSong">Not playing</div>
+        <div class="sp-artist" id="spArtist">Connect Spotify →</div>
+      </div>
+    </div>
+    <div class="sp-progress" onclick="seekSpotify(event,this)">
+      <div class="sp-prog-fill" id="spProg" style="width:0%"></div>
+    </div>
+    <div class="sp-time"><span id="spCur">0:00</span><span id="spDur">0:00</span></div>
+    <div class="sp-controls">
+      <button class="sp-btn" onclick="spCtrl('prev')" title="Previous">⏮</button>
+      <button class="sp-btn play-pause" onclick="spCtrl('toggle')" id="spPlayBtn">▶</button>
+      <button class="sp-btn" onclick="spCtrl('next')" title="Next">⏭</button>
+    </div>
+    <div class="sp-vol">
+      <span class="sp-vol-icon">🔈</span>
+      <div class="sp-vol-slider" onclick="setVol(event,this)"><div class="sp-vol-fill" id="spVol"></div></div>
+    </div>
+  </div>
+
+  <!-- Tools -->
+  <div class="hud-card tools-card">
+    <div class="tools-row">
+      <button class="tool-btn" onclick="takeScreenshot()">📷<span>Screenshot</span></button>
+      <button class="tool-btn" id="recToolBtn" onclick="toggleRec()">⏺<span>Record</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="flash"></div>
+<div id="toast"></div>
+
+<script>
+/* ─ DATA ─────────────────────────────────────────────────────── */
+// Games array — will be populated when user sends game files
+const GAMES = [
+  // Games will be added here
+];
+
+// Proxies array — cleared per user request
+const PROXIES = [
+  // Proxies will be added here  
+];
+
+// Apps
+const APPS = [
+  {title:"Spotify Web",   emoji:"🎵",desc:"Open Spotify in browser",  tag:"Music",  url:"https://open.spotify.com",      bg:"g5"},
+  {title:"YouTube Music", emoji:"▶️",desc:"Stream music & videos",     tag:"Music",  url:"https://music.youtube.com",     bg:"g2"},
+  {title:"SoundCloud",    emoji:"☁️",desc:"Discover new music",        tag:"Music",  url:"https://soundcloud.com",        bg:"g8"},
+  {title:"Discord",       emoji:"💬",desc:"Chat with friends",          tag:"Social", url:"https://discord.com/app",       bg:"g7"},
+  {title:"GitHub",        emoji:"⚙️",desc:"Code & projects",           tag:"Dev",    url:"https://github.com",            bg:"g3"},
+  {title:"Kahoot",        emoji:"🎯",desc:"Interactive quizzes",        tag:"School", url:"https://kahoot.it",             bg:"g4"},
+  {title:"Desmos",        emoji:"📊",desc:"Graphing calculator",        tag:"Math",   url:"https://desmos.com/calculator", bg:"g0"},
+  {title:"Quizlet",       emoji:"📚",desc:"Study flashcards",           tag:"School", url:"https://quizlet.com",           bg:"g1"},
+];
+
+/* ─ STATE ────────────────────────────────────────────────────── */
+let recs = JSON.parse(localStorage.getItem('pk_r')||'[]');
+let sess = parseInt(localStorage.getItem('pk_s')||'0');
+let mins = parseInt(localStorage.getItem('pk_m')||'0');
+let sStart = null;
+let bgOn = true;
+let immerse = false;
+let hudVisible = true;
+let isRecording = false;
+let mediaRecorder = null;
+let recChunks = [];
+let barT;
+
+/* ─ CANVAS BG ────────────────────────────────────────────────── */
+const cv = document.getElementById('bgCv'), cx = cv.getContext('2d');
+let pts = [], mx = innerWidth/2, my = innerHeight/2;
+function rz(){cv.width=innerWidth;cv.height=innerHeight}
+rz(); window.addEventListener('resize',rz);
+for(let i=0;i<70;i++) pts.push({
+  x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+  vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3
+});
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+function drawCv(){
+  if(!bgOn){cx.clearRect(0,0,cv.width,cv.height);return requestAnimationFrame(drawCv)}
+  cx.clearRect(0,0,cv.width,cv.height);
+  pts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    const dx=mx-p.x, dy=my-p.y, d=Math.hypot(dx,dy);
+    if(d<180){p.vx+=dx/d*.01; p.vy+=dy/d*.01}
+    p.vx*=.997; p.vy*=.997;
+    if(p.x<0||p.x>cv.width)p.vx*=-1;
+    if(p.y<0||p.y>cv.height)p.vy*=-1;
+    cx.beginPath(); cx.arc(p.x,p.y,1.3,0,Math.PI*2);
+    cx.fillStyle='rgba(108,99,255,.18)'; cx.fill();
+  });
+  for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+    const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+    if(d<90){
+      cx.beginPath(); cx.moveTo(pts[i].x,pts[i].y); cx.lineTo(pts[j].x,pts[j].y);
+      cx.strokeStyle=`rgba(108,99,255,${.06*(1-d/90)})`; cx.lineWidth=.6; cx.stroke();
+    }
+  }
+  requestAnimationFrame(drawCv);
+}
+drawCv();
+
+/* ─ STEALTH ──────────────────────────────────────────────────── */
+document.addEventListener('keydown',e=>{
+  if(e.shiftKey && e.key==='P') reveal();
+  if(e.key==='Escape'){
+    if(document.getElementById('ifl').style.display==='block'){closeProxy();return}
+    panic();
+  }
+  if(e.ctrlKey && e.key==='k'){e.preventDefault();document.getElementById('srch').focus()}
+  if(e.altKey && e.key==='ArrowLeft') closeProxy();
+  if(e.altKey && e.key==='h'){e.preventDefault();toggleHud()}
+  if(e.altKey && e.key==='s'){e.preventDefault();
+    if(document.getElementById('ifl').style.display==='block') takeScreenshot();
+    else goNav('settings',document.getElementById('ni-settings'));
+  }
+  if(e.altKey && e.key==='r'){e.preventDefault();if(document.getElementById('ifl').style.display==='block') toggleRec()}
+  if(e.altKey && e.key==='o') goNav('settings',document.getElementById('ni-settings'));
+});
+function reveal(){
+  document.getElementById('stealth').style.display='none';
+  document.getElementById('shell').style.display='block';
+  buildCards(); updateStats(); updateDate();
+  showToast('Welcome to Peak 🏔','success');
+}
+function panic(){window.location.href='https://classroom.google.com'}
+
+/* ─ NAV ──────────────────────────────────────────────────────── */
+const META = {
+  home:    {t:'Home',     s:'welcome to peak'},
+  games:   {t:'Games',    s:GAMES.length+' games · ready to play'},
+  proxy:   {t:'Proxies',  s:PROXIES.length+' proxy services'},
+  apps:    {t:'Apps',     s:APPS.length+' applications'},
+  recents: {t:'Recent',   s:'your session history'},
+  settings:{t:'Settings', s:'customize your experience'},
+  keys:    {t:'Shortcuts',s:'keyboard reference'},
+};
+function goNav(id, el){
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('on'));
+  if(el) el.classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  const pan = document.getElementById('p-'+id);
+  if(pan) pan.classList.add('on');
+  const m = META[id]||{t:id,s:''};
+  document.getElementById('tbTitle').textContent = m.t;
+  document.getElementById('tbSub').textContent = m.s;
+  if(id==='recents') buildRec();
+  if(id==='home') updateStats();
+}
+
+/* ─ CARDS ────────────────────────────────────────────────────── */
+const GLOW_COLORS = {
+  g0:'#6c63ff', g1:'#a855f7', g2:'#ef4444', g3:'#06b6d4',
+  g4:'#84cc16', g5:'#22d3a5', g6:'#f43f5e', g7:'#8b5cf6', g8:'#f97316'
+};
+function mkCard(item){
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.dataset.q = (item.title+' '+item.tag+' '+item.desc).toLowerCase();
+  const glowColor = GLOW_COLORS[item.bg] || '#6c63ff';
+  d.innerHTML = `
+    <div class="card-thumb ${item.bg}">
+      <div class="card-glow" style="background:${glowColor}"></div>
+      <span style="position:relative;z-index:1">${item.emoji}</span>
+      <span class="card-chip">${item.tag}</span>
+    </div>
+    <div class="card-body">
+      <div class="card-name">${item.title}</div>
+      <div class="card-desc">${item.desc}</div>
+    </div>
+    <div class="card-foot">
+      <span class="card-tag">${item.tag}</span>
+      <span class="play-btn">▶</span>
+    </div>`;
+  d.onclick = ()=>launch(item);
+  return d;
+}
+function buildCards(){
+  ['hgames','hproxy','agames','aproxy','aapps'].forEach(id=>document.getElementById(id).innerHTML='');
+
+  // Home games
+  const hgEl = document.getElementById('hgames');
+  if(GAMES.length === 0) document.getElementById('hgEmpty').style.display='block';
+  else { document.getElementById('hgEmpty').style.display='none'; GAMES.slice(0,4).forEach(g=>hgEl.appendChild(mkCard(g))); }
+
+  // Home proxies
+  const hpEl = document.getElementById('hproxy');
+  if(PROXIES.length === 0) document.getElementById('hpEmpty').style.display='block';
+  else { document.getElementById('hpEmpty').style.display='none'; PROXIES.slice(0,4).forEach(p=>hpEl.appendChild(mkCard(p))); }
+
+  // All games
+  const agEl = document.getElementById('agames');
+  if(GAMES.length === 0) document.getElementById('gempty').style.display='block';
+  else { document.getElementById('gempty').style.display='none'; GAMES.forEach(g=>agEl.appendChild(mkCard(g))); }
+
+  // All proxies
+  const apEl = document.getElementById('aproxy');
+  if(PROXIES.length === 0) document.getElementById('pempty').style.display='block';
+  else { document.getElementById('pempty').style.display='none'; PROXIES.forEach(p=>apEl.appendChild(mkCard(p))); }
+
+  // Apps
+  APPS.forEach(a=>document.getElementById('aapps').appendChild(mkCard(a)));
+
+  document.getElementById('gbadge').textContent = GAMES.length;
+  document.getElementById('pbadge').textContent = PROXIES.length;
+  document.getElementById('glabel').textContent = 'All Games — '+GAMES.length+' items';
+  document.getElementById('plabel').textContent = 'Proxy Hub — '+PROXIES.length+' services';
+  META.games.s = GAMES.length+' games · ready to play';
+  META.proxy.s = PROXIES.length+' proxy services';
+}
+function doSearch(q){
+  q = q.toLowerCase();
+  document.querySelectorAll('.card').forEach(c=>{c.style.display=c.dataset.q.includes(q)?'':'none'});
+  const vis = document.querySelectorAll('#agames .card:not([style*="none"])').length;
+  document.getElementById('gempty').style.display=(vis===0&&document.getElementById('p-games').classList.contains('on'))&&q?'block':'none';
+}
+
+/* ─ LAUNCH ───────────────────────────────────────────────────── */
+function launch(item){
+  recs = recs.filter(r=>r.url!==item.url);
+  recs.unshift({...item, time:Date.now()});
+  if(recs.length>30) recs = recs.slice(0,30);
+  localStorage.setItem('pk_r', JSON.stringify(recs));
+  sess++; localStorage.setItem('pk_s', sess);
+  sStart = Date.now();
+
+  // Set iframe src
+  document.getElementById('iframe').src = item.url;
+  document.getElementById('furl').textContent = item.url;
+  document.getElementById('ifl').style.display = 'block';
+  document.getElementById('hz').style.display = 'block';
+
+  // Show HUD
+  document.getElementById('hud').style.display = 'flex';
+  document.getElementById('hud-toggle').style.display = 'flex';
+  hudVisible = true;
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('hud-toggle').textContent = '▶';
+  document.getElementById('hud-toggle').classList.add('shifted');
+
+  updateStats();
+  showToast('Launching '+item.title+' 🚀','success');
+}
+
+function closeProxy(){
+  if(sStart){mins+=Math.round((Date.now()-sStart)/1000/60);localStorage.setItem('pk_m',mins);sStart=null}
+  if(isRecording) stopRecording();
+  document.getElementById('iframe').src = 'about:blank';
+  document.getElementById('ifl').style.display = 'none';
+  document.getElementById('hz').style.display = 'none';
+  document.getElementById('fbar').classList.remove('up');
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('hud-toggle').style.display = 'none';
+  document.getElementById('hud-toggle').classList.remove('shifted');
+  immerse = false; updateStats(); buildRec();
+}
+function reloadProxy(){const f=document.getElementById('iframe');f.src=f.src}
+
+let bv=false;
+function showBar(){clearTimeout(barT);if(!immerse){document.getElementById('fbar').classList.add('up');bv=true}}
+function hideBar(){barT=setTimeout(()=>{document.getElementById('fbar').classList.remove('up');bv=false},2000)}
+function togImmerse(){
+  immerse=!immerse;
+  document.getElementById('fbar').classList.remove('up');
+  document.getElementById('hz').style.display=immerse?'none':'block';
+  showToast(immerse?'Immerse mode on':'Immerse mode off');
+}
+
+/* ─ HUD TOGGLE ───────────────────────────────────────────────── */
+function toggleHud(){
+  hudVisible = !hudVisible;
+  const hud = document.getElementById('hud');
+  const btn = document.getElementById('hud-toggle');
+  if(hudVisible){
+    hud.classList.remove('hidden');
+    btn.textContent = '▶';
+    btn.classList.add('shifted');
+  } else {
+    hud.classList.add('hidden');
+    btn.textContent = '◀';
+    btn.classList.remove('shifted');
+  }
+}
+
+/* ─ SCREENSHOT ───────────────────────────────────────────────── */
+async function takeScreenshot(){
+  showToast('Taking screenshot…');
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await new Promise(r=>video.onloadedmetadata=r);
+    video.play();
+    await new Promise(r=>setTimeout(r,200));
+    const c = document.createElement('canvas');
+    c.width = video.videoWidth; c.height = video.videoHeight;
+    c.getContext('2d').drawImage(video,0,0);
+    stream.getTracks().forEach(t=>t.stop());
+    // Flash effect
+    const flash = document.getElementById('flash');
+    flash.style.opacity = '1';
+    setTimeout(()=>flash.style.opacity='0', 120);
+    // Download
+    const a = document.createElement('a');
+    a.href = c.toDataURL('image/png');
+    a.download = 'peak-screenshot-'+Date.now()+'.png';
+    a.click();
+    showToast('Screenshot saved! 📷','success');
+  } catch(e){
+    showToast('Screenshot cancelled','error');
+  }
+}
+
+/* ─ SCREEN RECORDER ──────────────────────────────────────────── */
+async function toggleRec(){
+  if(!isRecording) await startRecording();
+  else stopRecording();
+}
+async function startRecording(){
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+    recChunks = [];
+    mediaRecorder = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp9'});
+    mediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recChunks.push(e.data) };
+    mediaRecorder.onstop = ()=>{
+      const blob = new Blob(recChunks, {type:'video/webm'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'peak-recording-'+Date.now()+'.webm';
+      a.click();
+      isRecording = false;
+      updateRecUI();
+      showToast('Recording saved! 🎬','success');
+    };
+    stream.getVideoTracks()[0].onended = ()=>{ if(isRecording) stopRecording(); };
+    mediaRecorder.start(1000);
+    isRecording = true;
+    updateRecUI();
+    showToast('Recording started ⏺','error');
+  } catch(e){
+    showToast('Recording cancelled','error');
+  }
+}
+function stopRecording(){
+  if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  mediaRecorder?.stream?.getTracks().forEach(t=>t.stop());
+}
+function updateRecUI(){
+  const btn = document.getElementById('recBtn');
+  const toolBtn = document.getElementById('recToolBtn');
+  if(isRecording){
+    btn.textContent = '⏹'; btn.classList.add('rec-active');
+    toolBtn.innerHTML = '⏹<span>Stop</span>'; toolBtn.classList.add('recording');
+  } else {
+    btn.textContent = '⏺'; btn.classList.remove('rec-active');
+    toolBtn.innerHTML = '⏺<span>Record</span>'; toolBtn.classList.remove('recording');
+  }
+}
+
+/* ─ BATTERY ──────────────────────────────────────────────────── */
+async function initBattery(){
+  try {
+    if(!('getBattery' in navigator)) throw new Error('unsupported');
+    const batt = await navigator.getBattery();
+    const update = ()=>{
+      const pct = Math.round(batt.level*100);
+      document.getElementById('battPct').textContent = pct+'%';
+      document.getElementById('battStatus').textContent = batt.charging ? '⚡ Charging' : 'On battery';
+      const fill = document.getElementById('battFill');
+      fill.style.width = pct+'%';
+      fill.className = 'batt-fill'+(pct<=20?' crit':pct<=40?' warn':'');
+    };
+    update();
+    batt.addEventListener('levelchange',update);
+    batt.addEventListener('chargingchange',update);
+  } catch(e){
+    document.getElementById('battPct').textContent = 'N/A';
+    document.getElementById('battStatus').textContent = 'not supported';
+    document.getElementById('battFill').style.width = '100%';
+  }
+}
+initBattery();
+
+/* ─ SPOTIFY MOCK PLAYER ──────────────────────────────────────── */
+// Opens Spotify Web API auth — for now provides a functional fake player
+// that syncs if user pastes their token, otherwise shows demo mode
+let spPlaying = false;
+let spProgress = 0;
+let spDuration = 180;
+let spInterval = null;
+let spToken = localStorage.getItem('sp_token') || null;
+
+const DEMO_TRACKS = [
+  {song:'Not connected',artist:'Click 🔗 to link Spotify',art:'♪',dur:0},
+];
+let spTrackIdx = 0;
+
+function openSpotifyAuth(){
+  const clientId = ''; // User fills in their Spotify Client ID
+  if(!clientId){
+    // Show instructions toast
+    showToast('Add your Spotify Client ID in the code 🎵');
+    // Fallback: open spotify web
+    window.open('https://open.spotify.com','_blank');
+    return;
+  }
+  const redirect = encodeURIComponent(window.location.href);
+  const scopes = 'user-read-playback-state user-modify-playback-state user-read-currently-playing';
+  window.open(`https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${redirect}&scope=${encodeURIComponent(scopes)}`, '_blank');
+}
+
+function spCtrl(action){
+  if(action === 'toggle'){
+    spPlaying = !spPlaying;
+    document.getElementById('spPlayBtn').textContent = spPlaying ? '⏸' : '▶';
+    if(spPlaying) startSpTimer();
+    else clearInterval(spInterval);
+    if(spToken) spotifyAPI(spPlaying?'play':'pause');
+  } else if(action === 'next'){
+    spProgress = 0; spPlaying = true;
+    document.getElementById('spPlayBtn').textContent = '⏸';
+    startSpTimer();
+    if(spToken) spotifyAPI('next');
+  } else if(action === 'prev'){
+    spProgress = 0;
+    if(spToken) spotifyAPI('prev');
+  }
+  updateSpUI();
+}
+
+function startSpTimer(){
+  clearInterval(spInterval);
+  spInterval = setInterval(()=>{
+    if(spPlaying && spDuration > 0){
+      spProgress = Math.min(spProgress+1, spDuration);
+      updateSpUI();
+    }
+  }, 1000);
+}
+
+function updateSpUI(){
+  const pct = spDuration > 0 ? (spProgress/spDuration)*100 : 0;
+  document.getElementById('spProg').style.width = pct+'%';
+  document.getElementById('spCur').textContent = fmtTime(spProgress);
+  document.getElementById('spDur').textContent = fmtTime(spDuration);
+}
+
+function seekSpotify(e, el){
+  const rect = el.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  spProgress = Math.floor(pct * spDuration);
+  updateSpUI();
+}
+
+function setVol(e, el){
+  const rect = el.getBoundingClientRect();
+  const pct = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+  document.getElementById('spVol').style.width = (pct*100)+'%';
+}
+
+function fmtTime(s){
+  return Math.floor(s/60)+':'+(String(s%60).padStart(2,'0'));
+}
+
+async function spotifyAPI(action){
+  if(!spToken) return;
+  const endpoints = {
+    play:   ['PUT',  'https://api.spotify.com/v1/me/player/play',null],
+    pause:  ['PUT',  'https://api.spotify.com/v1/me/player/pause',null],
+    next:   ['POST', 'https://api.spotify.com/v1/me/player/next',null],
+    prev:   ['POST', 'https://api.spotify.com/v1/me/player/previous',null],
+  };
+  const [method, url] = endpoints[action] || [];
+  if(!url) return;
+  try {
+    await fetch(url, {method, headers:{'Authorization':'Bearer '+spToken}});
+    setTimeout(fetchSpotifyNow, 500);
+  } catch(e){}
+}
+
+async function fetchSpotifyNow(){
+  if(!spToken) return;
+  try {
+    const r = await fetch('https://api.spotify.com/v1/me/player/currently-playing',{
+      headers:{'Authorization':'Bearer '+spToken}
+    });
+    if(r.status === 204) return;
+    const d = await r.json();
+    if(d && d.item){
+      document.getElementById('spSong').textContent = d.item.name;
+      document.getElementById('spArtist').textContent = d.item.artists.map(a=>a.name).join(', ');
+      spDuration = Math.floor(d.item.duration_ms/1000);
+      spProgress = Math.floor(d.progress_ms/1000);
+      spPlaying = d.is_playing;
+      document.getElementById('spPlayBtn').textContent = spPlaying ? '⏸' : '▶';
+      if(d.item.album?.images[0]?.url){
+        document.getElementById('spArt').innerHTML = `<img src="${d.item.album.images[0].url}" alt="art">`;
+      }
+      if(spPlaying) startSpTimer(); else clearInterval(spInterval);
+      updateSpUI();
+    }
+  } catch(e){}
+}
+
+// Check URL hash for Spotify token after auth redirect
+(function checkSpToken(){
+  const hash = window.location.hash;
+  if(hash.includes('access_token')){
+    const params = new URLSearchParams(hash.slice(1));
+    spToken = params.get('access_token');
+    if(spToken){
+      localStorage.setItem('sp_token', spToken);
+      history.replaceState(null,'',window.location.pathname);
+      showToast('Spotify connected! 🎵','success');
+      setTimeout(fetchSpotifyNow, 500);
+    }
+  }
+})();
+
+if(spToken) setInterval(fetchSpotifyNow, 15000);
+
+/* ─ RECENTS ──────────────────────────────────────────────────── */
+function buildRec(){
+  const el = document.getElementById('recList');
+  if(!recs.length){el.innerHTML='<div class="empty"><div class="ei">🕑</div><p>No sessions yet</p></div>';return}
+  el.innerHTML = recs.slice(0,15).map(r=>`
+    <div class="li" onclick='launch(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+      <div class="li-icon">${r.emoji}</div>
+      <div><div class="li-name">${r.title}</div><div class="li-sub">${r.tag} · ${r.desc}</div></div>
+      <div class="li-time">${ago(r.time)}</div>
+    </div>`).join('');
+}
+function clearRec(){
+  recs=[]; sess=0; mins=0;
+  localStorage.removeItem('pk_r'); localStorage.removeItem('pk_s'); localStorage.removeItem('pk_m');
+  buildRec(); updateStats(); showToast('History cleared');
+}
+function ago(t){
+  const m = Math.floor((Date.now()-t)/60000);
+  if(m<1) return 'just now'; if(m<60) return m+'m ago';
+  const h = Math.floor(m/60); if(h<24) return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+
+/* ─ STATS / DATE / CLOCK ─────────────────────────────────────── */
+function updateStats(){
+  document.getElementById('sSes').textContent = sess;
+  document.getElementById('sTime').textContent = mins+'m';
+  document.getElementById('sVis').textContent = recs.length;
+}
+function updateDate(){
+  const d = new Date();
+  const h = d.getHours();
+  const greet = h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+  document.getElementById('greetTxt').textContent = greet;
+  document.getElementById('dateStr').textContent = d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('hudDate').textContent = d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+}
+function tick(){
+  const n = new Date(), s=t=>String(t).padStart(2,'0');
+  const time = s(n.getHours())+':'+s(n.getMinutes());
+  document.getElementById('sbClock').textContent = time;
+  document.getElementById('hudTime').textContent = time;
+}
+tick(); setInterval(tick,1000);
+updateDate(); setInterval(updateDate,60000);
+
+/* ─ SETTINGS ─────────────────────────────────────────────────── */
+function setTheme(t, el){
+  document.documentElement.setAttribute('data-theme', t==='dark'?'':t);
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  showToast('Theme: '+t.charAt(0).toUpperCase()+t.slice(1));
+}
+function togBg(el){bgOn=el.checked;if(!bgOn)cx.clearRect(0,0,cv.width,cv.height)}
+const MASKS = {
+  peak:     {title:'Peak Dashboard',  icon:'📐'},
+  gdocs:    {title:'Google Docs',     icon:'📄'},
+  canvas:   {title:'Canvas — Courses',icon:'📚'},
+  classroom:{title:'Google Classroom',icon:'🏫'},
+  khan:     {title:'Khan Academy',    icon:'🎓'},
+};
+function applyMask(){
+  const v = document.getElementById('maskSel').value;
+  document.getElementById('customWrap').style.display = v==='custom'?'block':'none';
+  if(v==='custom') return;
+  const m = MASKS[v];
+  document.getElementById('pageTitle').textContent = m.title;
+  document.getElementById('pageFavicon').href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${m.icon}</text></svg>`;
+  showToast('Tab: '+m.title);
+}
+function applyCustom(){
+  const t = document.getElementById('customTitle').value.trim();
+  if(!t) return;
+  document.getElementById('pageTitle').textContent = t;
+  showToast('Custom title set');
+}
+
+/* ─ TOAST ────────────────────────────────────────────────────── */
+let tt;
+function showToast(msg, type=''){
+  clearTimeout(tt);
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'up'+(type?' '+type:'');
+  tt = setTimeout(()=>el.classList.remove('up'),2800);
+}
+</script>
+</body>
+</html>
