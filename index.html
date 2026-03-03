@@ -528,6 +528,8 @@ input,select{font-family:inherit;}
   border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;
   color:var(--t4);font-size:10px;cursor:pointer;transition:all .14s;}
 .sp-close:hover{color:var(--t2);border-color:var(--b2);}
+.sp-loading{font-family:'DM Mono',monospace;font-size:9px;color:var(--t3);
+  letter-spacing:.1em;animation:spblink 1s ease-in-out infinite;}
 
 /* ═══════════════════════════════════════════════
    FAB NAVIGATION
@@ -742,7 +744,7 @@ input,select{font-family:inherit;}
       <div class="stream-note">
         <div class="stream-note-icon">ℹ️</div>
         <div class="stream-note-text">
-          Streaming opens via Google Slides viewer inside Peak. <b>Press F (fullscreen) inside the slides view</b> for the best experience. Each platform links to a curated slides deck — audio/video may vary by network.
+          Each platform opens in a <b>new tab</b> via Google Slides viewer. Press <b>F (fullscreen)</b> inside the slides view for the best experience. Audio/video may vary by network.
         </div>
       </div>
       <div class="stream-grid" id="STREAM_GRID"></div>
@@ -810,7 +812,7 @@ input,select{font-family:inherit;}
         <div class="divr" style="margin-bottom:8px">Gameplay</div>
         <div class="sb">
           <div class="sr">
-            <div><div class="sl">Music Player HUD</div><div class="sd">Show Spotify bar while gaming</div></div>
+            <div><div class="sl">Music Player HUD</div><div class="sd">Show music bar while gaming</div></div>
             <div class="tog on" id="HUD_TOG"></div>
           </div>
           <div class="sr">
@@ -933,7 +935,7 @@ input,select{font-family:inherit;}
   </div>
 </div>
 
-<!-- SPOTIFY HUD -->
+<!-- MUSIC HUD (Real Deezer Previews) -->
 <div id="SP">
   <div class="sp-art"><div class="sp-art-inner" id="sp-art-inner">🎵</div></div>
   <div class="sp-info">
@@ -948,12 +950,12 @@ input,select{font-family:inherit;}
     </div>
     <div class="sp-prog-row">
       <div class="sp-time"><span id="sp-cur">0:00</span></div>
-      <div class="sp-bar"><div class="sp-fill" id="sp-fill"></div></div>
-      <div class="sp-time" style="justify-content:flex-end"><span id="sp-dur">0:00</span></div>
+      <div class="sp-bar" id="sp-bar-click"><div class="sp-fill" id="sp-fill"></div></div>
+      <div class="sp-time" style="justify-content:flex-end"><span id="sp-dur">0:30</span></div>
     </div>
   </div>
   <div class="sp-right">
-    <div class="sp-badge"><div class="sp-dot"></div><span>spotify</span></div>
+    <div class="sp-badge"><div class="sp-dot"></div><span id="sp-status">deezer</span></div>
     <button class="sp-close" id="SP_CLOSE">✕</button>
   </div>
 </div>
@@ -985,8 +987,8 @@ const State = {
   unlocked: false,
   currentPanel: 'P_HOME',
   favorites: new Set(Storage.get('favorites',[])),
-  recent: Storage.get('recent',[]),       // array of game ids, max 8
-  ratings: Storage.get('ratings',{}),    // {id: 1-5}
+  recent: Storage.get('recent',[]),
+  ratings: Storage.get('ratings',{}),
   xp: Storage.get('xp',0),
   achievements: new Set(Storage.get('achievements',[])),
   muted: false,
@@ -996,7 +998,6 @@ const State = {
   errorTimer: null,
   currentGame: null,
   blobUrl: null,
-  particles: true,
   settings: Storage.get('settings',{
     esc:true, hud:true, fs:false, panel:false,
     motion:false, particles:true, cursor:true, compact:false
@@ -1005,15 +1006,15 @@ const State = {
 
 // ── GAME DATA ───────────────────────────────────────────────────────────────
 const GAMES = [
-  {id:"BuildArmy",name:"Build a Big Army",category:"Action",color:"#1a3a1a",color2:"#2d5a1b",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vcmF3Y2RuLmdpdGhhY2suY29tL2dlbml6eS9icmFpbnJvdC9tYWluL2J1aWxkLWEtYmlnLWFybXkvIjtmdW5jdGlvbiBfYWJzKHUpe2lmKCF1fHx0eXBlb2YgdSE9PSJzdHJpbmciKXJldHVybiB1O2lmKC9eKGh0dHBzPzp8YmxvYjp8ZGF0YTp8XC9cL3wjKS8udGVzdCh1KSlyZXR1cm4gdTtpZih1LnN0YXJ0c1dpdGgoIi8iKSlyZXR1cm4gdTtyZXR1cm4gX2Jhc2UrdTt9dmFyIF9veD1YTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3BlbjtYTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3Blbj1mdW5jdGlvbihtLHUsYSx1cyxwdyl7cmV0dXJuIF9veC5jYWxsKHRoaXMsbSxfYWJzKHUpLGEsdXMscHcpO307dmFyIF9vZj13aW5kb3cuZmV0Y2g7d2luZG93LmZldGNoPWZ1bmN0aW9uKGksbyl7aWYodHlwZW9mIGk9PT0ic3RyaW5nIilpPV9hYnMoaSk7cmV0dXJuIF9vZi5jYWxsKHdpbmRvdyxpLG8pO307fSkoKTs8XC9zY3JpcHQ+PCFET0NUWVBFIGh0bWw+PGh0bWwgbGFuZz0iZW4tdXMiPjxoZWFkPjxiYXNlIGhyZWY9Imh0dHBzOi8vcmF3Y2RuLmdpdGhhY2suY29tL2dlbml6eS9icmFpbnJvdC9tYWluL2J1aWxkLWEtYmlnLWFybXkvIj48bWV0YSBjaGFyc2V0PSJ1dGYtOCIvPjxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsaW5pdGlhbC1zY2FsZT0xLjAsdXNlci1zY2FsYWJsZT1ubyIvPjxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iLi9zdHlsZS5jc3MiLz48c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2duLW1hdGgvYXNzZXRzQG1haW4veWFuZGV4LXNkay5qcz9sb2wiPjxcL3NjcmlwdD48c3R5bGU+Y2FudmFzOmZvY3Vze291dGxpbmU6bm9uZX1odG1sLGJvZHl7cGFkZGluZzowO21hcmdpbjowO292ZXJmbG93OmhpZGRlbjtoZWlnaHQ6MTAwJX08L3N0eWxlPjwvaGVhZD48Ym9keSBjbGFzcz0iZGFyayI+PGRpdiBpZD0idW5pdHktY29udGFpbmVyIiBjbGFzcz0idW5pdHktZGVza3RvcCI+PGNhbnZhcyBpZD0idW5pdHktY2FudmFzIiB0YWJpbmRleD0iLTEiPjwvY2FudmFzPjwvZGl2PjxkaXYgaWQ9ImxvYWRpbmctY292ZXIiPjxkaXYgaWQ9InVuaXR5LWxvYWRpbmctYmFyIj48ZGl2IGlkPSJ1bml0eS1sb2dvIj48aW1nIHNyYz0iSW1hZ2VzL2xvZ28ucG5nIi8+PC9kaXY+PGRpdiBpZD0idW5pdHktcHJvZ3Jlc3MtYmFyLWVtcHR5IiBzdHlsZT0iZGlzcGxheTpub25lIj48ZGl2IGlkPSJ1bml0eS1wcm9ncmVzcy1iYXItZnVsbCI+PC9kaXY+PC9kaXY+PGRpdiBjbGFzcz0ic3Bpbm5lciI+PC9kaXY+PC9kaXY+PC9kaXY+PHNjcmlwdD5jb25zdCBidWlsZFVybD0iQnVpbGQiO2NvbnN0IGxvYWRlclVybD1idWlsZFVybCsiL0J1aWxkLmxvYWRlci5qcyI7Y29uc3QgY29uZmlnPXtkYXRhVXJsOmJ1aWxkVXJsKyIvQnVpbGQuZGF0YSIsZnJhbWV3b3JrVXJsOmJ1aWxkVXJsKyIvQnVpbGQuZnJhbWV3b3JrLmpzIixjb2RlVXJsOmJ1aWxkVXJsKyIvQnVpbGQud2FzbSIsc3RyZWFtaW5nQXNzZXRzVXJsOiJTdHJlYW1pbmdBc3NldHMiLGNvbXBhbnlOYW1lOiJLSU5FVElDQ1JJTUUiLHByb2R1Y3ROYW1lOiJCdWlsZCBhIEJpZyBBcm15ISIscHJvZHVjdFZlcnNpb246IjAuNSJ9O2NvbnN0IGNhbnZhcz1kb2N1bWVudC5xdWVyeVNlbGVjdG9yKCIjdW5pdHktY2FudmFzIik7Y29uc3QgbG9hZGluZ0NvdmVyPWRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIiNsb2FkaW5nLWNvdmVyIik7bG9hZGluZ0NvdmVyLnN0eWxlLmRpc3BsYXk9IiI7Y29uc3Qgc2NyaXB0PWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoInNjcmlwdCIpO3NjcmlwdC5zcmM9bG9hZGVyVXJsO3NjcmlwdC5vbmxvYWQ9KCk9PntjcmVhdGVVbml0eUluc3RhbmNlKGNhbnZhcyxjb25maWcsKHApPT57fSkudGhlbigodSk9Pntsb2FkaW5nQ292ZXIuc3R5bGUuZGlzcGxheT0ibm9uZSI7fSkuY2F0Y2goY29uc29sZS5lcnJvcik7fTtkb2N1bWVudC5ib2R5LmFwcGVuZENoaWxkKHNjcmlwdCk7PFwvc2NyaXB0PjwvYm9keT48L2h0bWw+`)},
-  {id:"SchoolboyRunaway",name:"Schoolboy Runaway",category:"Action",color:"#1a1a3a",color2:"#2b2b6e",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9nZW5penkvd2ViLXBvcnRAbGF0ZXN0L3NjaG9vbGJveS1ydW5hd2F5LyI7ZnVuY3Rpb24gX2Ficyh1KXtpZighdXx8dHlwZW9mIHUhPT0ic3RyaW5nIilyZXR1cm4gdTtpZigvXihodHRwcz86fGJsb2I6fGRhdGE6fFwvXC98IykvLnRlc3QodSkpcmV0dXJuIHU7aWYodS5zdGFydHNXaXRoKCIvIikpcmV0dXJuIHU7cmV0dXJuIF9iYXNlK3U7fXZhciBfb3g9WE1MSHR0cFJlcXVlc3QucHJvdG90eXBlLm9wZW47WE1MSHR0cFJlcXVlc3QucHJvdG90eXBlLm9wZW49ZnVuY3Rpb24obSx1LGEsdXMscHcpe3JldHVybiBfb3guY2FsbCh0aGlzLG0sX2Ficyh1KSxhLHVzLHB3KTt9O3ZhciBfb2Y9d2luZG93LmZldGNoO3dpbmRvdy5mZXRjaD1mdW5jdGlvbihpLG8pe2lmKHR5cGVvZiBpPT09InN0cmluZyIpaT1fYWJzKGkpO3JldHVybiBfb2YuY2FsbCh3aW5kb3csaSxvKTt9O30pKCk7PFwvc2NyaXB0PjwhRE9DVFlQRSBodG1sPjxodG1sIGxhbmc9ImVuLXVzIj48aGVhZD48YmFzZSBocmVmPSJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvZ2VuaXp5L3dlYi1wb3J0QGxhdGVzdC9zY2hvb2xib3ktcnVuYXdheS8iPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ii8+PHRpdGxlPlNjaG9vbEJveSBSdW5hd2F5PC90aXRsZT48bGluayByZWw9InN0eWxlc2hlZXQiIGhyZWY9IlRlbXBsYXRlRGF0YS9zdHlsZS5jc3MiLz48L2hlYWQ+PGJvZHk+PGRpdiBzdHlsZT0iY29sb3I6YmxhY2s7Zm9udC1zaXplOjMycHg7Zm9udC1mYW1pbHk6Y3Vyc2l2ZTt0ZXh0LWFsaWduOmNlbnRlcjttYXJnaW4tdG9wOjIwcHgiIGlkPSJsb2FkaW5nLXRleHQiPkxPQURJTkcuLi48L2Rpdj48ZGl2IGlkPSJ1bml0eS1jb250YWluZXIiPjxjYW52YXMgaWQ9InVuaXR5LWNhbnZhcyIgd2lkdGg9Ijk2MCIgaGVpZ2h0PSI2MDAiIHRhYmluZGV4PSItMSI+PC9jYW52YXM+PGRpdiBpZD0idW5pdHktbG9hZGluZy1iYXIiPjxkaXYgaWQ9InVuaXR5LWxvZ28iPjwvZGl2PjxkaXYgaWQ9InVuaXR5LXByb2dyZXNzLWJhci1lbXB0eSI+PGRpdiBpZD0idW5pdHktcHJvZ3Jlc3MtYmFyLWZ1bGwiPjwvZGl2PjwvZGl2PjwvZGl2PjwvZGl2PjxzY3JpcHQ+Y29uc3QgbHQ9ZG9jdW1lbnQucXVlcnlTZWxlY3RvcigiI2xvYWRpbmctdGV4dCIpO2xldCB0Yj0zMTU2NzM4MDQsbGI9MDthc3luYyBmdW5jdGlvbiBmdyh1cmwpe2NvbnN0IHI9YXdhaXQgZmV0Y2godXJsKTtjb25zdCByZD1yLmJvZHkuZ2V0UmVhZGVyKCk7bGV0IGNoPVtdLHJlYz0wO3doaWxlKHRydWUpe2NvbnN0e2RvbmUsdmFsfT1hd2FpdCByZC5yZWFkKCk7aWYoZG9uZSlicmVhaztyZWMrPXZhbC5sZW5ndGg7bGIrPXZhbC5sZW5ndGg7Y2gucHVzaCh2YWwpO2NvbnN0IHA9KChsYi90YikqMTAwKS50b0ZpeGVkKDEpO2x0LnRleHRDb250ZW50PWBMT0FESU5HLi4uICR7KGxiLzEwNDg1NzYpLnRvRml4ZWQoMSl9TUIgKCR7cH0lKWA7fWxldCBmYj1uZXcgVWludDhBcnJheShyZWMpLG9mZj0wO2ZvcihsZXQgYyBvZiBjaCl7ZmIuc2V0KGMsb2ZmKTtvZmYrPWMubGVuZ3RoO31yZXR1cm4gZmIuYnVmZmVyO31hc3luYyBmdW5jdGlvbiBtZihwdHMpe2NvbnN0IGJzPWF3YWl0IFByb21pc2UuYWxsKHB0cy5tYXAoZncpKTtyZXR1cm4gVVJMLmNyZWF0ZU9iamVjdFVSTChuZXcgQmxvYihicykpO31mdW5jdGlvbiBncChmLG4pe2xldCBwPVtdO2ZvcihsZXQgaT0xO2k8PW47aSsrKXAucHVzaChmKyIucGFydCIraSk7cmV0dXJuIHA7fShhc3luYygpPT57Y29uc3RbZFUsd1VdPWF3YWl0IFByb21pc2UuYWxsKFttZihncCgiQnVpbGQvc2Nob29sYm95LXJ1bmF3YXkuZGF0YSIsMTQpKSxtZihncCgiQnVpbGQvc2Nob29sYm95LXJ1bmF3YXkud2FzbSIsMikpXSk7Y29uc3QgY3Y9ZG9jdW1lbnQucXVlcnlTZWxlY3RvcigiI3VuaXR5LWNhbnZhcyIpO2NvbnN0IHNjPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoInNjcmlwdCIpO3NjLnNyYz0iQnVpbGQvc2Nob29sYm95LXJ1bmF3YXkubG9hZGVyLmpzIjtzYy5vbmxvYWQ9KCk9PntjcmVhdGVVbml0eUluc3RhbmNlKGN2LHtkYXRhVXJsOmRVLGZyYW1ld29ya1VybDoiQnVpbGQvc2Nob29sYm95LXJ1bmF3YXkuZnJhbWV3b3JrLmpzIixjb2RlVXJsOndVLHN0cmVhbWluZ0Fzc2V0c1VybDoiU3RyZWFtaW5nQXNzZXRzIixjb21wYW55TmFtZToiTGlua2VkIFNxdWFkIixwcm9kdWN0TmFtZToiU2Nob29sQm95IFJ1bmF3YXkiLHByb2R1Y3RWZXJzaW9uOiIwLjUwMCJ9LChwKT0+e2RvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIiN1bml0eS1wcm9ncmVzcy1iYXItZnVsbCIpLnN0eWxlLndpZHRoPTEwMCpwKyIlIjt9KS50aGVuKCgpPT57bHQucmVtb3ZlKCk7ZG9jdW1lbnQucXVlcnlTZWxlY3RvcigiI3VuaXR5LWxvYWRpbmctYmFyIikuc3R5bGUuZGlzcGxheT0ibm9uZSI7fSkuY2F0Y2goYWxlcnQpO307ZG9jdW1lbnQuYm9keS5hcHBlbmRDaGlsZChzYyk7fSkoKTs8XC9zY3JpcHQ+PC9ib2R5PjwvaHRtbD4=`)},
-  {id:"PolyTrack",name:"Poly Track",category:"Sports",color:"#1a0a00",color2:"#3d2200",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9nZW5penkvcG9seXRyYWNrQGxhdGVzdC8iO2Z1bmN0aW9uIF9hYnModSl7aWYoIXV8fHR5cGVvZiB1IT09InN0cmluZyIpcmV0dXJuIHU7aWYoL14oaHR0cHM/OnxibG9iOnxkYXRhOnxcL1wvfCMpLy50ZXN0KHUpKXJldHVybiB1O2lmKHUuc3RhcnRzV2l0aCgiLyIpKXJldHVybiB1O3JldHVybiBfYmFzZSt1O312YXIgX294PVhNTEh0dHBSZXF1ZXN0LnByb3RvdHlwZS5vcGVuO1hNTEh0dHBSZXF1ZXN0LnByb3RvdHlwZS5vcGVuPWZ1bmN0aW9uKG0sdSxhLHVzLHB3KXtyZXR1cm4gX294LmNhbGwodGhpcyxtLF9hYnModSksYSx1cyxwdyk7fTt2YXIgX29mPXdpbmRvdy5mZXRjaDt3aW5kb3cuZmV0Y2g9ZnVuY3Rpb24oaSxvKXtpZih0eXBlb2YgaT09PSJzdHJpbmciKWk9X2FicyhpKTtyZXR1cm4gX29mLmNhbGwod2luZG93LGksbyk7fTt9KSgpOzxcL3NjcmlwdD48IWRvY3R5cGUgaHRtbD48aHRtbD48aGVhZD48YmFzZSBocmVmPSJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvZ2VuaXp5L3BvbHl0cmFja0BsYXRlc3QvIj48c2NyaXB0PndpbmRvdy5qa2RmZ25qa25kZmc9ZG9jdW1lbnQucXVlcnlTZWxlY3RvcignYmFzZScpLmhyZWY7ZmV0Y2goInNpbXVsYXRpb25fd29ya2VyLmJ1bmRsZS5qcyIpLnRoZW4ocj0+ci50ZXh0KCkpLnRoZW4odD0+e2NvbnN0IGI9bmV3IEJsb2IoW3QucmVwbGFjZUFsbCgicmVwbGFjZXRoaXNwbGVhc2UiLHdpbmRvdy5qa2RmZ25qa25kZmcpXSx7dHlwZTonYXBwbGljYXRpb24vamF2YXNjcmlwdCd9KTt3aW5kb3cuc2ltdWxhdGlvbndvcmtlcj1VUkwuY3JlYXRlT2JqZWN0VVJMKGIpO30pO2NvbnN0IG9ndz13aW5kb3cuV29ya2VyO3dpbmRvdy5Xb3JrZXI9ZnVuY3Rpb24ocyxvKXtpZih0eXBlb2Ygcz09PSdzdHJpbmcnJiZzLnRvTG93ZXJDYXNlKCk9PT0ic2ltdWxhdGlvbl93b3JrZXIuYnVuZGxlLmpzIil7cmV0dXJuIG5ldyBvZ3cod2luZG93LnNpbXVsYXRpb253b3JrZXIsbyk7fXJldHVybiBuZXcgb2d3KHMsbyk7fTt3aW5kb3cuV29ya2VyLnByb3RvdHlwZT1vZ3cucHJvdG90eXBlO2NvbnN0IG9nZj13aW5kb3cuZmV0Y2g7d2luZG93LmZldGNoPWFzeW5jIGZ1bmN0aW9uKGksbyl7aWYodHlwZW9mIGk9PT0ic3RyaW5nIilpPWkucmVwbGFjZSgidnBzLmtvZHViLmNvbSIsInZwc2tvZHViLnRtZW5hMTU2NS53b3JrZXJzLmRldiIpO3JldHVybiBvZ2YoaSxvKTt9O2NvbnN0IG9neD1YTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3BlbjtYTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3Blbj1mdW5jdGlvbihtLHUsLi4ucil7aWYodHlwZW9mIHU9PT0ic3RyaW5nIil1PXUucmVwbGFjZSgidnBzLmtvZHViLmNvbSIsInZwc2tvZHViLnRtZW5hMTU2NS53b3JrZXJzLmRldiIpO3JldHVybiBvZ3guY2FsbCh0aGlzLG0sdSwuLi5yKTt9OzxcL3NjcmlwdD48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEsbWluaW11bS1zY2FsZT0xLG1heGltdW0tc2NhbGU9MSx2aWV3cG9ydC1maXQ9Y292ZXIsdXNlci1zY2FsYWJsZT1ubyI+PHNjcmlwdCBkZWZlciBzcmM9ImVycm9yX3NjcmVlbi5idW5kbGUuanMiPjxcL3NjcmlwdD48c2NyaXB0IGRlZmVyIHNyYz0ibWFpbi5idW5kbGUuanMiPjxcL3NjcmlwdD48L2hlYWQ+PGJvZHk+PGNhbnZhcyBpZD0ic2NyZWVuIj48L2NhbnZhcz48ZGl2IGlkPSJ1aSI+PC9kaXY+PGRpdiBpZD0idHJhbnNpdGlvbi1sYXllciI+PC9kaXY+PC9ib2R5PjwvaHRtbD4=`)},
-  {id:"GetYoked",name:"Get Yoked",category:"Sports",color:"#0d1a2a",color2:"#1a3a5c",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9idWJibHMvVUdTLUFzc2V0c0BtYWluL2dldCUyMHlva2VkLyI7ZnVuY3Rpb24gX2Ficyh1KXtpZighdXx8dHlwZW9mIHUhPT0ic3RyaW5nIilyZXR1cm4gdTtpZigvXihodHRwcz86fGJsb2I6fGRhdGE6fFwvXC98IykvLnRlc3QodSkpcmV0dXJuIHU7aWYodS5zdGFydHNXaXRoKCIvIikpcmV0dXJuIHU7cmV0dXJuIF9iYXNlK3U7fXZhciBfb3g9WE1MSHR0cFJlcXVlc3QucHJvdG90eXBlLm9wZW47WE1MSHR0cFJlcXVlc3QucHJvdG90eXBlLm9wZW49ZnVuY3Rpb24obSx1LGEsdXMscHcpe3JldHVybiBfb3guY2FsbCh0aGlzLG0sX2Ficyh1KSxhLHVzLHB3KTt9O3ZhciBfb2Y9d2luZG93LmZldGNoO3dpbmRvdy5mZXRjaD1mdW5jdGlvbihpLG8pe2lmKHR5cGVvZiBpPT09InN0cmluZyIpaT1fYWJzKGkpO3JldHVybiBfb2YuY2FsbCh3aW5kb3csaSxvKTt9O30pKCk7PFwvc2NyaXB0PjxodG1sIGxhbmc9ImVuLXVzIj48YmFzZSBocmVmPSJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvYnViYmxzL1VHUy1Bc3NldHNAbWFpbi9nZXQlMjB5b2tlZC8iPjxoZWFkPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ij48dGl0bGU+R2V0IFlva2VkPC90aXRsZT48c3R5bGU+aHRtbCxib2R5e2JhY2tncm91bmQ6IzAwMDt3aWR0aDoxMDAlO2hlaWdodDoxMDAlO3BhZGRpbmc6MDttYXJnaW46MDt9I2dhbWVDb250YWluZXJ7YmFja2dyb3VuZDp0cmFuc3BhcmVudCFpbXBvcnRhbnQ7cG9zaXRpb246YWJzb2x1dGU7fSNnYW1lQ29udGFpbmVyIGNhbnZhc3twb3NpdGlvbjphYnNvbHV0ZTt9I2xvYWRpbmctdGV4dHtjb2xvcjp3aGl0ZTtmb250LWZhbWlseTpzYW5zLXNlcmlmO3RleHQtYWxpZ246Y2VudGVyO21hcmdpbi10b3A6MWVtO308L3N0eWxlPjwvaGVhZD48Ym9keT48ZGl2IGlkPSJnYW1lQ29udGFpbmVyIj48Y2FudmFzIGlkPSJ1bml0eS1jYW52YXMiIGRhdGEtcGl4ZWwtYXJ0PjwvY2FudmFzPjxkaXYgaWQ9ImxvYWRpbmctdGV4dCI+TE9BRElORy4uLjwvZGl2PjwvZGl2PjxzY3JpcHQgc3JjPSJCdWlsZC9XZWIubG9hZGVyLmpzIj48XC9zY3JpcHQ+PHNjcmlwdD5jb25zdCBsdD1kb2N1bWVudC5xdWVyeVNlbGVjdG9yKCIjbG9hZGluZy10ZXh0Iik7bGV0IHRiPTAsbGI9MDthc3luYyBmdW5jdGlvbiBnUyh1KXt0cnl7Y29uc3Qgcj1hd2FpdCBmZXRjaCh1LHttZXRob2Q6IkhFQUQifSk7cmV0dXJuIHBhcnNlSW50KHIuaGVhZGVycy5nZXQoIkNvbnRlbnQtTGVuZ3RoIil8fCIwIiwxMCk7fWNhdGNoe3JldHVybiAwO319YXN5bmMgZnVuY3Rpb24gZlAodSl7Y29uc3Qgcj1hd2FpdCBmZXRjaCh1KTtjb25zdCByZD1yLmJvZHkuZ2V0UmVhZGVyKCk7Y29uc3QgY2g9W107bGV0IHJlYz0wO3doaWxlKHRydWUpe2NvbnN0e2RvbmUsdmFsdWV9PWF3YWl0IHJkLnJlYWQoKTtpZihkb25lKWJyZWFrO3JlYys9dmFsdWUubGVuZ3RoO2xiKz12YWx1ZS5sZW5ndGg7Y2gucHVzaCh2YWx1ZSk7bHQudGV4dENvbnRlbnQ9YExPQURJTkcuLi4gJHsoKGxiL3RiKSoxMDApLnRvRml4ZWQoMSl9JWA7fWNvbnN0IGY9bmV3IFVpbnQ4QXJyYXkocmVjKTtsZXQgb2ZmPTA7Zm9yKGxldCBjIG9mIGNoKXtmLnNldChjLG9mZik7b2ZmKz1jLmxlbmd0aDt9cmV0dXJuIGY7fWFzeW5jIGZ1bmN0aW9uIG1QKHB0cyxtdCl7Y29uc3QgYnM9YXdhaXQgUHJvbWlzZS5hbGwocHRzLm1hcChmUCkpO2NvbnN0IHRsPWJzLnJlZHVjZSgocyxiKT0+cytiLmxlbmd0aCwwKTtjb25zdCBjYXQ9bmV3IFVpbnQ4QXJyYXkodGwpO2xldCBvPTA7Zm9yKGxldCBiIG9mIGJzKXtjYXQuc2V0KGIsbyk7bys9Yi5sZW5ndGg7fXJldHVybiBVUkwuY3JlYXRlT2JqZWN0VVJMKG5ldyBCbG9iKFtjYXRdLHt0eXBlOm10fHx1bmRlZmluZWR9KSk7fWZ1bmN0aW9uIGdQdHMoZixuKXtjb25zdCBwPVtdO2ZvcihsZXQgaT0xO2k8PW47aSsrKXAucHVzaChmKyIucGFydCIraSk7cmV0dXJuIHA7fShhc3luYygpPT57dHJ5e2NvbnN0IGRQPWdQdHMoIkJ1aWxkL1dlYi5kYXRhIiwyKTtjb25zdCB3UD1nUHRzKCJCdWlsZC9XZWIud2FzbSIsMyk7Y29uc3QgYWxsPVsuLi5kUCwuLi53UCwiQnVpbGQvV2ViLmZyYW1ld29yay5qcyJdO2NvbnN0IHNpemVzPWF3YWl0IFByb21pc2UuYWxsKGFsbC5tYXAoZ1MpKTt0Yj1zaXplcy5yZWR1Y2UoKGEsYik9PmErYiwwKTtjb25zdFtkVSx3VSxmVV09YXdhaXQgUHJvbWlzZS5hbGwoW21QKGRQKSxtUCh3UCksbVAoWyJCdWlsZC9XZWIuZnJhbWV3b3JrLmpzIl0sJ2FwcGxpY2F0aW9uL2phdmFzY3JpcHQnKV0pO2NvbnN0IGN2PWRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIiN1bml0eS1jYW52YXMiKTtmdW5jdGlvbiBvblIoKXtjb25zdCB3PXdpbmRvdy5pbm5lcldpZHRoLGg9d2luZG93LmlubmVySGVpZ2h0LHI9NTQwLzk2MDtsZXQgbnc9dyxuaD1NYXRoLmZsb29yKHcqcik7aWYobmg+aCl7bmg9aDtudz1NYXRoLmNlaWwoaC9yKTt9Y3YucGFyZW50RWxlbWVudC5zdHlsZS5jc3NUZXh0PWB3aWR0aDoke253fXB4O2hlaWdodDoke25ofXB4O3RvcDokeyhoLW5oKS8yfXB4O2xlZnQ6JHsody1udykvMn1weDtgO2N2LnN0eWxlLmNzc1RleHQ9YHdpZHRoOiR7bnd9cHg7aGVpZ2h0OiR7bmh9cHg7YDt9d2luZG93LmFkZEV2ZW50TGlzdGVuZXIoJ3Jlc2l6ZScsb25SKTtvblIoKTtjcmVhdGVVbml0eUluc3RhbmNlKGN2LHtkYXRhVXJsOmRVLGZyYW1ld29ya1VybDpmVSxjb2RlVXJsOndVLHN0cmVhbWluZ0Fzc2V0c1VybDoiaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2J1YmJscy9VR1MtQXNzZXRzQG1haW4vZ2V0JTIweW9rZWQvU3RyZWFtaW5nQXNzZXRzIn0sKHApPT57bHQudGV4dENvbnRlbnQ9YExPQURJTkcuLi4gJHtNYXRoLnJvdW5kKHAqMTAwKX0lYDt9KS50aGVuKCgpPT57bHQucmVtb3ZlKCk7fSkuY2F0Y2goZT0+e2x0LnRleHRDb250ZW50PSdFcnJvcjogJytlO30pO31jYXRjaChlKXtsdC50ZXh0Q29udGVudD0nRVJST1I6ICcrZTt9fSkoKTs8XC9zY3JpcHQ+PC9ib2R5PjwvaHRtbD4=`)},
-  {id:"FiveNights",name:"Five Nights at Epstein's",category:"Horror",color:"#1a0000",color2:"#3d0000",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC93ZWItcG9ydHMvZm5hZUBjOWM4YjUxM2EyNzE1NWJmMzdjNGFiM2RlZTc0ZTk5YjEyYjg5NWJhLyI7ZnVuY3Rpb24gX2Ficyh1KXtpZighdXx8dHlwZW9mIHUhPT0ic3RyaW5nIilyZXR1cm4gdTtpZigvXihodHRwcz86fGJsb2I6fGRhdGE6fFwvXC98IykvLnRlc3QodSkpcmV0dXJuIHU7aWYodS5zdGFydHNXaXRoKCIvIikpcmV0dXJuIHU7cmV0dXJuIF9iYXNlK3U7fXZhciBfb3g9WE1MSHR0cFJlcXVlc3QucHJvdG90eXBlLm9wZW47WE1MSHR0cFJlcXVlc3QucHJvdG90eXBlLm9wZW49ZnVuY3Rpb24obSx1LGEsdXMscHcpe3JldHVybiBfb3guY2FsbCh0aGlzLG0sX2Ficyh1KSxhLHVzLHB3KTt9O3ZhciBfb2Y9d2luZG93LmZldGNoO3dpbmRvdy5mZXRjaD1mdW5jdGlvbihpLG8pe2lmKHR5cGVvZiBpPT09InN0cmluZyIpaT1fYWJzKGkpO3JldHVybiBfb2YuY2FsbCh3aW5kb3csaSxvKTt9O30pKCk7PFwvc2NyaXB0PjwhRE9DVFlQRSBodG1sPjxodG1sIGxhbmc9ImVuLXVzIj48aGVhZD48YmFzZSBocmVmPSJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvd2ViLXBvcnRzL2ZuYWVAYzljOGI1MTNhMjcxNTViZjM3YzRhYjNkZWU3NGU5OWIxMmI4OTViYS8iPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ij48dGl0bGU+Rml2ZSBOaWdodHMgYXQgQklHIEU8L3RpdGxlPjxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iVGVtcGxhdGVEYXRhL3N0eWxlLmNzcyI+PC9oZWFkPjxib2R5PjxkaXYgaWQ9ImxvYWRpbmctdGV4dCIgc3R5bGU9ImNvbG9yOndoaXRlO2ZvbnQtc2l6ZTozMnB4O2ZvbnQtZmFtaWx5OmN1cnNpdmU7dGV4dC1hbGlnbjpjZW50ZXI7bWFyZ2luLXRvcDoyMHB4Ij5MT0FESU5HLi4uPC9kaXY+PGRpdiBpZD0idW5pdHktY29udGFpbmVyIj48Y2FudmFzIGlkPSJ1bml0eS1jYW52YXMiIHdpZHRoPSI5NjAiIGhlaWdodD0iNjAwIiB0YWJpbmRleD0iLTEiPjwvY2FudmFzPjxkaXYgaWQ9InVuaXR5LWxvYWRpbmctYmFyIj48ZGl2IGlkPSJ1bml0eS1sb2dvIj48L2Rpdj48ZGl2IGlkPSJ1bml0eS1wcm9ncmVzcy1iYXItZW1wdHkiPjxkaXYgaWQ9InVuaXR5LXByb2dyZXNzLWJhci1mdWxsIj48L2Rpdj48L2Rpdj48L2Rpdj48L2Rpdj48c2NyaXB0PmNvbnN0IGx0PWRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIiNsb2FkaW5nLXRleHQiKTtsZXQgbGI9MDthc3luYyBmdW5jdGlvbiBmdyh1KXtjb25zdCByPWF3YWl0IGZldGNoKHUpO2NvbnN0IHJkPXIuYm9keS5nZXRSZWFkZXIoKTtsZXQgY2g9W10scmVjPTA7d2hpbGUodHJ1ZSl7Y29uc3R7ZG9uZSx2YWx1ZX09YXdhaXQgcmQucmVhZCgpO2lmKGRvbmUpYnJlYWs7cmVjKz12YWx1ZS5sZW5ndGg7bGIrPXZhbHVlLmxlbmd0aDtjaC5wdXNoKHZhbHVlKTtsdC50ZXh0Q29udGVudD1gTE9BRElORy4uLiAkeyhsYi8xMDQ4NTc2KS50b0ZpeGVkKDEpfU1CIC8gMTU1Ljg0TUJgO31sZXQgZmI9bmV3IFVpbnQ4QXJyYXkocmVjKSxvZmY9MDtmb3IobGV0IGMgb2YgY2gpe2ZiLnNldChjLG9mZik7b2ZmKz1jLmxlbmd0aDt9cmV0dXJuIGZiLmJ1ZmZlcjt9YXN5bmMgZnVuY3Rpb24gbWYocHRzKXtjb25zdCBicz1hd2FpdCBQcm9taXNlLmFsbChwdHMubWFwKGZ3KSk7cmV0dXJuIFVSTC5jcmVhdGVPYmplY3RVUkwobmV3IEJsb2IoYnMpKTt9ZnVuY3Rpb24gZ3AoZixzLGUpe2xldCBwPVtdO2ZvcihsZXQgaT1zO2k8PWU7aSsrKXAucHVzaChmKyIucGFydCIraSk7cmV0dXJuIHA7fShhc3luYygpPT57Y29uc3RbZFUsd1Usd2VibV09YXdhaXQgUHJvbWlzZS5hbGwoW21mKGdwKCJCdWlsZC9mbmFlLmRhdGEiLDEsMykpLG1mKGdwKCJCdWlsZC9mbmFlLndhc20iLDEsMykpLG1mKGdwKCJTdHJlYW1pbmdBc3NldHMvMjAyNTEyMTkxOTM1LndlYm0iLDEsMykpXSk7d2luZG93LnJhbmRvbXdlYm09d2VibTtjb25zdCBycz1PYmplY3QuZ2V0T3duUHJvcGVydHlEZXNjcmlwdG9yKEhUTUxNZWRpYUVsZW1lbnQucHJvdG90eXBlLCJzcmMiKTtPYmplY3QuZGVmaW5lUHJvcGVydHkoSFRNTE1lZGlhRWxlbWVudC5wcm90b3R5cGUsInNyYyIse3NldCh2KXtpZih0eXBlb2Ygdj09PSJzdHJpbmciJiYodi5pbmNsdWRlcygiMjAyNTEyMTkxOTM1Lm1wNCIpfHx2LmluY2x1ZGVzKCIyMDI1MTIxOTE5MzUud2VibSIpKSl2PXdpbmRvdy5yYW5kb213ZWJtO3JldHVybiBycy5zZXQuY2FsbCh0aGlzLHYpO30sZ2V0KCl7cmV0dXJuIHJzLmdldC5jYWxsKHRoaXMpO319KTtjb25zdCBjdj1kb2N1bWVudC5xdWVyeVNlbGVjdG9yKCIjdW5pdHktY2FudmFzIik7Y29uc3Qgc2M9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic2NyaXB0Iik7c2Muc3JjPSJCdWlsZC9mbmFlLmxvYWRlci5qcyI7c2Mub25sb2FkPSgpPT57Y3JlYXRlVW5pdHlJbnN0YW5jZShjdix7YXJndW1lbnRzOltdLGRhdGFVcmw6ZFUsZnJhbWV3b3JrVXJsOiJCdWlsZC9mbmFlLmZyYW1ld29yay5qcyIsY29kZVVybDp3VSxzdHJlYW1pbmdBc3NldHNVcmw6IlN0cmVhbWluZ0Fzc2V0cyIsY29tcGFueU5hbWU6IkRlZmF1bHRDb21wYW55Iixwcm9kdWN0TmFtZToiZm5hZSIscHJvZHVjdFZlcnNpb246IjEuMCJ9LChwKT0+e2RvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIiN1bml0eS1wcm9ncmVzcy1iYXItZnVsbCIpLnN0eWxlLndpZHRoPTEwMCpwKyIlIjt9KS50aGVuKCgpPT57ZG9jdW1lbnQucXVlcnlTZWxlY3RvcigiI3VuaXR5LWxvYWRpbmctYmFyIikuc3R5bGUuZGlzcGxheT0ibm9uZSI7bHQucmVtb3ZlKCk7fSkuY2F0Y2goKCk9Pnt9KTt9O2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoc2MpO30pKCk7PFwvc2NyaXB0PjwvYm9keT48L2h0bWw+`)},
-  {id:"SnowRider",name:"Snow Rider 3D",category:"Sports",color:"#001a2a",color2:"#003d5c",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9WcmtpZHMyMDA5L3Nub3dyaWRlcjNkQDZiN2MyYjkxNjdiNTkyNTI4YjIyMTQyODQxNGU2M2YwNmM0NjQwYjkvIjtmdW5jdGlvbiBfYWJzKHUpe2lmKCF1fHx0eXBlb2YgdSE9PSJzdHJpbmciKXJldHVybiB1O2lmKC9eKGh0dHBzPzp8YmxvYjp8ZGF0YTp8XC9cL3wjKS8udGVzdCh1KSlyZXR1cm4gdTtpZih1LnN0YXJ0c1dpdGgoIi8iKSlyZXR1cm4gdTtyZXR1cm4gX2Jhc2UrdTt9dmFyIF9veD1YTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3BlbjtYTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3Blbj1mdW5jdGlvbihtLHUsYSx1cyxwdyl7cmV0dXJuIF9veC5jYWxsKHRoaXMsbSxfYWJzKHUpLGEsdXMscHcpO307dmFyIF9vZj13aW5kb3cuZmV0Y2g7d2luZG93LmZldGNoPWZ1bmN0aW9uKGksbyl7aWYodHlwZW9mIGk9PT0ic3RyaW5nIilpPV9hYnMoaSk7cmV0dXJuIF9vZi5jYWxsKHdpbmRvdyxpLG8pO307fSkoKTs8XC9zY3JpcHQ+PGxpbmsgcmVsPSJzdHlsZXNoZWV0IiBocmVmPSJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvVnJraWRzMjAwOS9zbm93cmlkZXIzZEA2YjdjMmI5MTY3YjU5MjUyOGIyMjE0Mjg0MTRlNjNmMDZjNDY0MGI5L1RlbXBsYXRlRGF0YS9zdHlsZS5jc3MiPjxzY3JpcHQgc3JjPSJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvVnJraWRzMjAwOS9zbm93cmlkZXIzZEA2YjdjMmI5MTY3YjU5MjUyOGIyMjE0Mjg0MTRlNjNmMDZjNDY0MGI5L1RlbXBsYXRlRGF0YS9Vbml0eVByb2dyZXNzLmpzIj48XC9zY3JpcHQ+PHNjcmlwdCBzcmM9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9WcmtpZHMyMDA5L3Nub3dyaWRlcjNkQDZiN2MyYjkxNjdiNTkyNTI4YjIyMTQyODQxNGU2M2YwNmM0NjQwYjkvQnVpbGQvVW5pdHlMb2FkZXIuanMiPjxcL3NjcmlwdD48c2NyaXB0PnZhciBnYW1lSW5zdGFuY2U9VW5pdHlMb2FkZXIuaW5zdGFudGlhdGUoImdhbWVDb250YWluZXIiLCJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvVnJraWRzMjAwOS9zbm93cmlkZXIzZEA2YjdjMmI5MTY3YjU5MjUyOGIyMjE0Mjg0MTRlNjNmMDZjNDY0MGI5L0J1aWxkL1Nub3dSaWRlcjNELWdkLTEuanNvbiIse29uUHJvZ3Jlc3M6VW5pdHlQcm9ncmVzcyxNb2R1bGU6e29uUnVudGltZUluaXRpYWxpemVkOmZ1bmN0aW9uKCl7VW5pdHlQcm9ncmVzcyhnYW1lSW5zdGFuY2UsImNvbXBsZXRlIil9fX0pOzxcL3NjcmlwdD48ZGl2IGNsYXNzPSJ3ZWJnbC1jb250ZW50Ij48ZGl2IGlkPSJnYW1lQ29udGFpbmVyIiBzdHlsZT0id2lkdGg6MTAwJTtoZWlnaHQ6MTAwJTttYXJnaW46YXV0byI+PC9kaXY+PC9kaXY+`)},
-  {id:"BlockBlast",name:"Block Blast",category:"Puzzle",color:"#0d0d2a",color2:"#1a1a5c",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9nZW5penkvYmwvIjtmdW5jdGlvbiBfYWJzKHUpe2lmKCF1fHx0eXBlb2YgdSE9PSJzdHJpbmciKXJldHVybiB1O2lmKC9eKGh0dHBzPzp8YmxvYjp8ZGF0YTp8XC9cL3wjKS8udGVzdCh1KSlyZXR1cm4gdTtpZih1LnN0YXJ0c1dpdGgoIi8iKSlyZXR1cm4gdTtyZXR1cm4gX2Jhc2UrdTt9dmFyIF9veD1YTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3BlbjtYTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3Blbj1mdW5jdGlvbihtLHUsYSx1cyxwdyl7cmV0dXJuIF9veC5jYWxsKHRoaXMsbSxfYWJzKHUpLGEsdXMscHcpO307dmFyIF9vZj13aW5kb3cuZmV0Y2g7d2luZG93LmZldGNoPWZ1bmN0aW9uKGksbyl7aWYodHlwZW9mIGk9PT0ic3RyaW5nIilpPV9hYnMoaSk7cmV0dXJuIF9vZi5jYWxsKHdpbmRvdyxpLG8pO307fSkoKTs8XC9zY3JpcHQ+PCFET0NUWVBFIGh0bWw+PGh0bWwgbGFuZz0iZW4tdXMiPjxoZWFkPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ij48dGl0bGU+QmxvY2sgQmxhc3QgUHV6emxlPC90aXRsZT48bGluayByZWw9InN0eWxlc2hlZXQiIGhyZWY9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9nZW5penkvYmwvVGVtcGxhdGVEYXRhL3N0eWxlLmNzcyI+PC9oZWFkPjxib2R5PjxkaXYgaWQ9InVuaXR5LWNvbnRhaW5lciI+PGNhbnZhcyBpZD0idW5pdHktY2FudmFzIiB3aWR0aD0iMTA4MCIgaGVpZ2h0PSIxOTIwIiB0YWJpbmRleD0iLTEiPjwvY2FudmFzPjxkaXYgaWQ9InVuaXR5LWxvYWRpbmctYmFyIj48ZGl2IGlkPSJ1bml0eS1sb2dvIj48L2Rpdj48ZGl2IGlkPSJ1bml0eS1wcm9ncmVzcy1iYXItZW1wdHkiPjxkaXYgaWQ9InVuaXR5LXByb2dyZXNzLWJhci1mdWxsIj48L2Rpdj48L2Rpdj48L2Rpdj48L2Rpdj48c2NyaXB0PnZhciBiVT0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2dlbml6eS9ibC9CdWlsZCI7dmFyIHNjPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoInNjcmlwdCIpO3NjLnNyYz1iVSsiL0Jsb2NrQmxhc3QxLjEtOC5sb2FkZXIuanMiO3NjLm9ubG9hZD0oKT0+e2NyZWF0ZVVuaXR5SW5zdGFuY2UoZG9jdW1lbnQucXVlcnlTZWxlY3RvcigiI3VuaXR5LWNhbnZhcyIpLHtkYXRhVXJsOmJVKyIvQmxvY2tCbGFzdDEuMS04LmRhdGEudW5pdHl3ZWIiLGZyYW1ld29ya1VybDpiVSsiL0Jsb2NrQmxhc3QxLjEtOC5mcmFtZXdvcmsuanMudW5pdHl3ZWIiLGNvZGVVcmw6YlUrIi9CbG9ja0JsYXN0MS4xLTgud2FzbS51bml0eXdlYiIsc3RyZWFtaW5nQXNzZXRzVXJsOiJTdHJlYW1pbmdBc3NldHMiLHByb2R1Y3ROYW1lOiJCbG9jayBCbGFzdCBQdXp6bGUiLHByb2R1Y3RWZXJzaW9uOiIxLjEifSwocCk9Pntkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCIjdW5pdHktcHJvZ3Jlc3MtYmFyLWZ1bGwiKS5zdHlsZS53aWR0aD0xMDAqcCsiJSI7fSkudGhlbigoKT0+e2RvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIiN1bml0eS1sb2FkaW5nLWJhciIpLnN0eWxlLmRpc3BsYXk9Im5vbmUiO30pLmNhdGNoKGFsZXJ0KTt9O2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoc2MpOzxcL3NjcmlwdD48L2JvZHk+PC9odG1sPg==`)},
-  {id:"BazookaBoy",name:"Bazooka Boy",category:"Action",color:"#2a0d00",color2:"#5c1a00",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9idWJibHMveW91dHViZS1wbGF5YWJsZXNAbWFpbi9iYXpvb2thLWJveS8iO2Z1bmN0aW9uIF9hYnModSl7aWYoIXV8fHR5cGVvZiB1IT09InN0cmluZyIpcmV0dXJuIHU7aWYoL14oaHR0cHM/OnxibG9iOnxkYXRhOnxcL1wvfCMpLy50ZXN0KHUpKXJldHVybiB1O2lmKHUuc3RhcnRzV2l0aCgiLyIpKXJldHVybiB1O3JldHVybiBfYmFzZSt1O312YXIgX294PVhNTEh0dHBSZXF1ZXN0LnByb3RvdHlwZS5vcGVuO1hNTEh0dHBSZXF1ZXN0LnByb3RvdHlwZS5vcGVuPWZ1bmN0aW9uKG0sdSxhLHVzLHB3KXtyZXR1cm4gX294LmNhbGwodGhpcyxtLF9hYnModSksYSx1cyxwdyk7fTt2YXIgX29mPXdpbmRvdy5mZXRjaDt3aW5kb3cuZmV0Y2g9ZnVuY3Rpb24oaSxvKXtpZih0eXBlb2YgaT09PSJzdHJpbmciKWk9X2FicyhpKTtyZXR1cm4gX29mLmNhbGwod2luZG93LGksbyk7fTt9KSgpOzxcL3NjcmlwdD48IWRvY3R5cGUgaHRtbD48aGVhZD48YmFzZSBocmVmPSJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZ2gvYnViYmxzL3lvdXR1YmUtcGxheWFibGVzQG1haW4vYmF6b29rYS1ib3kvIj48c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2J1YmJscy95b3V0dWJlLXBsYXlhYmxlc0BtYWluL3l0Z2FtZS5qcyI+PFwvc2NyaXB0PjxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsaW5pdGlhbC1zY2FsZT0xLG1heGltdW0tc2NhbGU9MSI+PHN0eWxlPmJvZHl7b3ZlcmZsb3cteTpub25lO21hcmdpbjowO3dpZHRoOjEwMCU7cG9zaXRpb246Zml4ZWQ7YmFja2dyb3VuZDojZmY0ZTIxO30jbG9hZGluZ3t3aWR0aDoxMDB2dztoZWlnaHQ6MTAwdmg7YmFja2dyb3VuZDojZmY0ZTIxO2Rpc3BsYXk6ZmxleDtqdXN0aWZ5LWNvbnRlbnQ6Y2VudGVyO2FsaWduLWl0ZW1zOmNlbnRlcjtmbGV4LWRpcmVjdGlvbjpjb2x1bW47bWFyZ2luOjAgYXV0bzt9I2xvYWRpbmdfbG9nb3t0ZXh0LWFsaWduOmNlbnRlcjt3aWR0aDo1MCU7aGVpZ2h0OmZpdC1jb250ZW50O30jbG9hZGluZ19iYXJ7d2lkdGg6NTAlO2hlaWdodDoxMXB4O2JhY2tncm91bmQ6cmdiYSgwLDAsMCwuMjUpO21hcmdpbi10b3A6MTAwcHg7ZGlzcGxheTpmbGV4O30jbG9hZGluZ19iYXJfcHJvZ3Jlc3N7d2lkdGg6MCU7aGVpZ2h0OjExcHg7fSNsb2FkaW5nX3RleHR7Y29sb3I6d2hpdGU7fTwvc3R5bGU+PC9oZWFkPjxib2R5PjxjYW52YXMgaWQ9ImNhbnZhcyIgc3R5bGU9InBvc2l0aW9uOmFic29sdXRlO3RvcDowO2xlZnQ6MDtkaXNwbGF5Om5vbmU7Ij48L2NhbnZhcz48ZGl2IGlkPSJsb2FkaW5nIj48aW1nIGlkPSJsb2FkaW5nX2xvZ28iIHNyYz0iYXNzZXRzLzJkL2xvYWRpbmcvTG9hZGluZ19Mb2dvLnBuZyIgYWx0PSJMb2dvIj48ZGl2IGlkPSJsb2FkaW5nX2JhciI+PGltZyBpZD0ibG9hZGluZ19iYXJfcHJvZ3Jlc3MiIHNyYz0iYXNzZXRzLzJkL2xvYWRpbmcvTG9hZGluZ19CYXJfRnVsbC5wbmciIGFsdD0iQmFyIj48L2Rpdj48aDMgaWQ9ImxvYWRpbmdfdGV4dCI+TG9hZGluZy4uLjwvaDM+PC9kaXY+PHNjcmlwdCBkZWZlciBzcmM9InZlbmRvci5mMGVhNDQ1NTMyNDQ3MTNkMzk3Yi5qcyI+PFwvc2NyaXB0PjxzY3JpcHQgZGVmZXIgc3JjPSJtYWluLjU4ODkxNjVkZmNkNzkyMmEwNzkzLmpzIj48XC9zY3JpcHQ+PC9ib2R5Pg==`)},
-  {id:"BasketRandom",name:"Basket Random",category:"Sports",color:"#1a0d00",color2:"#3d2000",html:atob(`PHNjcmlwdD4oZnVuY3Rpb24oKXt2YXIgX2Jhc2U9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9idWJibHMvcnVmZmxlQDE1MjBkOTBkN2IyOTk0NzM3YWNkOGY3YTYzM2QwMThmNjNjMjJjYTcvIjtmdW5jdGlvbiBfYWJzKHUpe2lmKCF1fHx0eXBlb2YgdSE9PSJzdHJpbmciKXJldHVybiB1O2lmKC9eKGh0dHBzPzp8YmxvYjp8ZGF0YTp8XC9cL3wjKS8udGVzdCh1KSlyZXR1cm4gdTtpZih1LnN0YXJ0c1dpdGgoIi8iKSlyZXR1cm4gdTtyZXR1cm4gX2Jhc2UrdTt9dmFyIF9veD1YTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3BlbjtYTUxIdHRwUmVxdWVzdC5wcm90b3R5cGUub3Blbj1mdW5jdGlvbihtLHUsYSx1cyxwdyl7cmV0dXJuIF9veC5jYWxsKHRoaXMsbSxfYWJzKHUpLGEsdXMscHcpO307dmFyIF9vZj13aW5kb3cuZmV0Y2g7d2luZG93LmZldGNoPWZ1bmN0aW9uKGksbyl7aWYodHlwZW9mIGk9PT0ic3RyaW5nIilpPV9hYnMoaSk7cmV0dXJuIF9vZi5jYWxsKHdpbmRvdyxpLG8pO307fSkoKTs8XC9zY3JpcHQ+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0iVVRGLTgiPjx0aXRsZT5CYXNrZXQgUmFuZG9tPC90aXRsZT48bWV0YSBuYW1lPSJ2aWV3cG9ydCIgY29udGVudD0id2lkdGg9ZGV2aWNlLXdpZHRoLGluaXRpYWwtc2NhbGU9MSxtYXhpbXVtLXNjYWxlPTEsbWluaW11bS1zY2FsZT0xLHVzZXItc2NhbGFibGU9bm8iPjxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2J1YmJscy9ydWZmbGVAMTUyMGQ5MGQ3YjI5OTQ3MzdhY2Q4ZjdhNjMzZDAxOGY2M2MyMmNhNy9zdHlsZS5jc3MiIHR5cGU9InRleHQvY3NzIj48L2hlYWQ+PGJvZHk+PHNjcmlwdCBzcmM9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9idWJibHMvcnVmZmxlQDE1MjBkOTBkN2IyOTk0NzM3YWNkOGY3YTYzM2QwMThmNjNjMjJjYTcvYm94MmQuanMiPjxcL3NjcmlwdD48c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2J1YmJscy9ydWZmbGVAMTUyMGQ5MGQ3YjI5OTQ3MzdhY2Q4ZjdhNjMzZDAxOGY2M2MyMmNhNy9zdXBwb29ydGNoZWNrLmpzIj48XC9zY3JpcHQ+PHNjcmlwdCBzcmM9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC9idWJibHMvcnVmZmxlQDE1MjBkOTBkN2IyOTk0NzM3YWNkOGY3YTYzM2QwMThmNjNjMjJjYTcvb2ZmY2xpZW50LmpzIiB0eXBlPSJtb2R1bGUiPjxcL3NjcmlwdD48c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2J1YmJscy9ydWZmbGVAMTUyMGQ5MGQ3YjI5OTQ3MzdhY2Q4ZjdhNjMzZDAxOGY2M2MyMmNhNy9tYWluLmpzIiB0eXBlPSJtb2R1bGUiPjxcL3NjcmlwdD48c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2J1YmJscy9ydWZmbGVAMTUyMGQ5MGQ3YjI5OTQ3MzdhY2Q4ZjdhNjMzZDAxOGY2M2MyMmNhNy9yZWdpc3RlcnN3LmpzIiB0eXBlPSJtb2R1bGUiPjxcL3NjcmlwdD48c2NyaXB0IHNyYz0iaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2J1YmJscy9ydWZmbGVAMTUyMGQ5MGQ3YjI5OTQ3MzdhY2Q4ZjdhNjMzZDAxOGY2M2MyMmNhNy9hcGkuanMiPjxcL3NjcmlwdD48L2JvZHk+PC9odG1sPg==`)},
+  {id:"BuildArmy",name:"Build a Big Army",category:"Action",color:"#1a3a1a",color2:"#2d5a1b",html:`<script>(function(){var _base="https://rawcdn.githack.com/genizy/brainrot/main/build-a-big-army/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><!DOCTYPE html><html lang="en-us"><head><base href="https://rawcdn.githack.com/genizy/brainrot/main/build-a-big-army/"><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/><link rel="stylesheet" href="./style.css"/><script src="https://cdn.jsdelivr.net/gh/gn-math/assets@main/yandex-sdk.js?lol"><\/script><style>canvas:focus{outline:none}html,body{padding:0;margin:0;overflow:hidden;height:100%}</style></head><body class="dark"><div id="unity-container" class="unity-desktop"><canvas id="unity-canvas" tabindex="-1"></canvas></div><div id="loading-cover"><div id="unity-loading-bar"><div id="unity-logo"><img src="Images/logo.png"/></div><div id="unity-progress-bar-empty" style="display:none"><div id="unity-progress-bar-full"></div></div><div class="spinner"></div></div></div><script>const buildUrl="Build";const loaderUrl=buildUrl+"/Build.loader.js";const config={dataUrl:buildUrl+"/Build.data",frameworkUrl:buildUrl+"/Build.framework.js",codeUrl:buildUrl+"/Build.wasm",streamingAssetsUrl:"StreamingAssets",companyName:"KINETICCRIME",productName:"Build a Big Army!",productVersion:"0.5"};const canvas=document.querySelector("#unity-canvas");const loadingCover=document.querySelector("#loading-cover");loadingCover.style.display="";const script=document.createElement("script");script.src=loaderUrl;script.onload=()=>{createUnityInstance(canvas,config,(p)=>{}).then((u)=>{loadingCover.style.display="none";}).catch(console.error);};document.body.appendChild(script);<\/script></body></html>`},
+  {id:"SchoolboyRunaway",name:"Schoolboy Runaway",category:"Action",color:"#1a1a3a",color2:"#2b2b6e",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/genizy/web-port@latest/schoolboy-runaway/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><!DOCTYPE html><html lang="en-us"><head><base href="https://cdn.jsdelivr.net/gh/genizy/web-port@latest/schoolboy-runaway/"><meta charset="utf-8"/><title>SchoolBoy Runaway</title><link rel="stylesheet" href="TemplateData/style.css"/></head><body><div style="color:black;font-size:32px;font-family:cursive;text-align:center;margin-top:20px" id="loading-text">LOADING...</div><div id="unity-container"><canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas><div id="unity-loading-bar"><div id="unity-logo"></div><div id="unity-progress-bar-empty"><div id="unity-progress-bar-full"></div></div></div></div><script>const lt=document.querySelector("#loading-text");let tb=315673804,lb=0;async function fw(url){const r=await fetch(url);const rd=r.body.getReader();let ch=[],rec=0;while(true){const{done,val}=await rd.read();if(done)break;rec+=val.length;lb+=val.length;ch.push(val);const p=((lb/tb)*100).toFixed(1);lt.textContent=\`LOADING... \${(lb/1048576).toFixed(1)}MB (\${p}%)\`;}let fb=new Uint8Array(rec),off=0;for(let c of ch){fb.set(c,off);off+=c.length;}return fb.buffer;}async function mf(pts){const bs=await Promise.all(pts.map(fw));return URL.createObjectURL(new Blob(bs));}function gp(f,n){let p=[];for(let i=1;i<=n;i++)p.push(f+".part"+i);return p;}(async()=>{const[dU,wU]=await Promise.all([mf(gp("Build/schoolboy-runaway.data",14)),mf(gp("Build/schoolboy-runaway.wasm",2))]);const cv=document.querySelector("#unity-canvas");const sc=document.createElement("script");sc.src="Build/schoolboy-runaway.loader.js";sc.onload=()=>{createUnityInstance(cv,{dataUrl:dU,frameworkUrl:"Build/schoolboy-runaway.framework.js",codeUrl:wU,streamingAssetsUrl:"StreamingAssets",companyName:"Linked Squad",productName:"SchoolBoy Runaway",productVersion:"0.500"},(p)=>{document.querySelector("#unity-progress-bar-full").style.width=100*p+"%";}).then(()=>{lt.remove();document.querySelector("#unity-loading-bar").style.display="none";}).catch(alert);};document.body.appendChild(sc);})();<\/script></body></html>`},
+  {id:"PolyTrack",name:"Poly Track",category:"Sports",color:"#1a0a00",color2:"#3d2200",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/genizy/polytrack@latest/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><!doctype html><html><head><base href="https://cdn.jsdelivr.net/gh/genizy/polytrack@latest/"><script>window.jkdfgnjkndfg=document.querySelector('base').href;fetch("simulation_worker.bundle.js").then(r=>r.text()).then(t=>{const b=new Blob([t.replaceAll("replacethisplease",window.jkdfgnjkndfg)],{type:'application/javascript'});window.simulationworker=URL.createObjectURL(b);});const ogw=window.Worker;window.Worker=function(s,o){if(typeof s==='string'&&s.toLowerCase()==="simulation_worker.bundle.js"){return new ogw(window.simulationworker,o);}return new ogw(s,o);};window.Worker.prototype=ogw.prototype;const ogf=window.fetch;window.fetch=async function(i,o){if(typeof i==="string")i=i.replace("vps.kodub.com","vpskodub.tmena1565.workers.dev");return ogf(i,o);};const ogx=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,...r){if(typeof u==="string")u=u.replace("vps.kodub.com","vpskodub.tmena1565.workers.dev");return ogx.call(this,m,u,...r);};<\/script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no"><script defer src="error_screen.bundle.js"><\/script><script defer src="main.bundle.js"><\/script></head><body><canvas id="screen"></canvas><div id="ui"></div><div id="transition-layer"></div></body></html>`},
+  {id:"GetYoked",name:"Get Yoked",category:"Sports",color:"#0d1a2a",color2:"#1a3a5c",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@main/get%20yoked/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><html lang="en-us"><base href="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@main/get%20yoked/"><head><meta charset="utf-8"><title>Get Yoked</title><style>html,body{background:#000;width:100%;height:100%;padding:0;margin:0;}#gameContainer{background:transparent!important;position:absolute;}#gameContainer canvas{position:absolute;}#loading-text{color:white;font-family:sans-serif;text-align:center;margin-top:1em;}</style></head><body><div id="gameContainer"><canvas id="unity-canvas" data-pixel-art></canvas><div id="loading-text">LOADING...</div></div><script src="Build/Web.loader.js"><\/script><script>const lt=document.querySelector("#loading-text");let tb=0,lb=0;async function gS(u){try{const r=await fetch(u,{method:"HEAD"});return parseInt(r.headers.get("Content-Length")||"0",10);}catch{return 0;}}async function fP(u){const r=await fetch(u);const rd=r.body.getReader();const ch=[];let rec=0;while(true){const{done,value}=await rd.read();if(done)break;rec+=value.length;lb+=value.length;ch.push(value);lt.textContent=\`LOADING... \${((lb/tb)*100).toFixed(1)}%\`;}const f=new Uint8Array(rec);let off=0;for(let c of ch){f.set(c,off);off+=c.length;}return f;}async function mP(pts,mt){const bs=await Promise.all(pts.map(fP));const tl=bs.reduce((s,b)=>s+b.length,0);const cat=new Uint8Array(tl);let o=0;for(let b of bs){cat.set(b,o);o+=b.length;}return URL.createObjectURL(new Blob([cat],{type:mt||undefined}));}function gPts(f,n){const p=[];for(let i=1;i<=n;i++)p.push(f+".part"+i);return p;}(async()=>{try{const dP=gPts("Build/Web.data",2);const wP=gPts("Build/Web.wasm",3);const all=[...dP,...wP,"Build/Web.framework.js"];const sizes=await Promise.all(all.map(gS));tb=sizes.reduce((a,b)=>a+b,0);const[dU,wU,fU]=await Promise.all([mP(dP),mP(wP),mP(["Build/Web.framework.js"],'application/javascript')]);const cv=document.querySelector("#unity-canvas");function onR(){const w=window.innerWidth,h=window.innerHeight,r=540/960;let nw=w,nh=Math.floor(w*r);if(nh>h){nh=h;nw=Math.ceil(h/r);}cv.parentElement.style.cssText=\`width:\${nw}px;height:\${nh}px;top:\${(h-nh)/2}px;left:\${(w-nw)/2}px;\`;cv.style.cssText=\`width:\${nw}px;height:\${nh}px;\`;}window.addEventListener('resize',onR);onR();createUnityInstance(cv,{dataUrl:dU,frameworkUrl:fU,codeUrl:wU,streamingAssetsUrl:"https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@main/get%20yoked/StreamingAssets"},(p)=>{lt.textContent=\`LOADING... \${Math.round(p*100)}%\`;}).then(()=>{lt.remove();}).catch(e=>{lt.textContent='Error: '+e;});}catch(e){lt.textContent='ERROR: '+e;}})();<\/script></body></html>`},
+  {id:"FiveNights",name:"Five Nights at Epstein's",category:"Horror",color:"#1a0000",color2:"#3d0000",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/web-ports/fnae@c9c8b513a27155bf37c4ab3dee74e99b12b895ba/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><!DOCTYPE html><html lang="en-us"><head><base href="https://cdn.jsdelivr.net/gh/web-ports/fnae@c9c8b513a27155bf37c4ab3dee74e99b12b895ba/"><meta charset="utf-8"><title>Five Nights at BIG E</title><link rel="stylesheet" href="TemplateData/style.css"></head><body><div id="loading-text" style="color:white;font-size:32px;font-family:cursive;text-align:center;margin-top:20px">LOADING...</div><div id="unity-container"><canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas><div id="unity-loading-bar"><div id="unity-logo"></div><div id="unity-progress-bar-empty"><div id="unity-progress-bar-full"></div></div></div></div><script>const lt=document.querySelector("#loading-text");let lb=0;async function fw(u){const r=await fetch(u);const rd=r.body.getReader();let ch=[],rec=0;while(true){const{done,value}=await rd.read();if(done)break;rec+=value.length;lb+=value.length;ch.push(value);lt.textContent=\`LOADING... \${(lb/1048576).toFixed(1)}MB / 155.84MB\`;}let fb=new Uint8Array(rec),off=0;for(let c of ch){fb.set(c,off);off+=c.length;}return fb.buffer;}async function mf(pts){const bs=await Promise.all(pts.map(fw));return URL.createObjectURL(new Blob(bs));}function gp(f,s,e){let p=[];for(let i=s;i<=e;i++)p.push(f+".part"+i);return p;}(async()=>{const[dU,wU,webm]=await Promise.all([mf(gp("Build/fnae.data",1,3)),mf(gp("Build/fnae.wasm",1,3)),mf(gp("StreamingAssets/202512191935.webm",1,3))]);window.randomwebm=webm;const rs=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,"src");Object.defineProperty(HTMLMediaElement.prototype,"src",{set(v){if(typeof v==="string"&&(v.includes("202512191935.mp4")||v.includes("202512191935.webm")))v=window.randomwebm;return rs.set.call(this,v);},get(){return rs.get.call(this);}});const cv=document.querySelector("#unity-canvas");const sc=document.createElement("script");sc.src="Build/fnae.loader.js";sc.onload=()=>{createUnityInstance(cv,{arguments:[],dataUrl:dU,frameworkUrl:"Build/fnae.framework.js",codeUrl:wU,streamingAssetsUrl:"StreamingAssets",companyName:"DefaultCompany",productName:"fnae",productVersion:"1.0"},(p)=>{document.querySelector("#unity-progress-bar-full").style.width=100*p+"%";}).then(()=>{document.querySelector("#unity-loading-bar").style.display="none";lt.remove();}).catch(()=>{});};document.body.appendChild(sc);})();<\/script></body></html>`},
+  {id:"SnowRider",name:"Snow Rider 3D",category:"Sports",color:"#001a2a",color2:"#003d5c",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/Vrkids2009/snowrider3d@6b7c2b9167b592528b221428414e63f06c4640b9/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Vrkids2009/snowrider3d@6b7c2b9167b592528b221428414e63f06c4640b9/TemplateData/style.css"><script src="https://cdn.jsdelivr.net/gh/Vrkids2009/snowrider3d@6b7c2b9167b592528b221428414e63f06c4640b9/TemplateData/UnityProgress.js"><\/script><script src="https://cdn.jsdelivr.net/gh/Vrkids2009/snowrider3d@6b7c2b9167b592528b221428414e63f06c4640b9/Build/UnityLoader.js"><\/script><script>var gameInstance=UnityLoader.instantiate("gameContainer","https://cdn.jsdelivr.net/gh/Vrkids2009/snowrider3d@6b7c2b9167b592528b221428414e63f06c4640b9/Build/SnowRider3D-gd-1.json",{onProgress:UnityProgress,Module:{onRuntimeInitialized:function(){UnityProgress(gameInstance,"complete")}}});<\/script><div class="webgl-content"><div id="gameContainer" style="width:100%;height:100%;margin:auto"></div></div>`},
+  {id:"BlockBlast",name:"Block Blast",category:"Puzzle",color:"#0d0d2a",color2:"#1a1a5c",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/genizy/bl/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><!DOCTYPE html><html lang="en-us"><head><meta charset="utf-8"><title>Block Blast Puzzle</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/genizy/bl/TemplateData/style.css"></head><body><div id="unity-container"><canvas id="unity-canvas" width="1080" height="1920" tabindex="-1"></canvas><div id="unity-loading-bar"><div id="unity-logo"></div><div id="unity-progress-bar-empty"><div id="unity-progress-bar-full"></div></div></div></div><script>var bU="https://cdn.jsdelivr.net/gh/genizy/bl/Build";var sc=document.createElement("script");sc.src=bU+"/BlockBlast1.1-8.loader.js";sc.onload=()=>{createUnityInstance(document.querySelector("#unity-canvas"),{dataUrl:bU+"/BlockBlast1.1-8.data.unityweb",frameworkUrl:bU+"/BlockBlast1.1-8.framework.js.unityweb",codeUrl:bU+"/BlockBlast1.1-8.wasm.unityweb",streamingAssetsUrl:"StreamingAssets",productName:"Block Blast Puzzle",productVersion:"1.1"},(p)=>{document.querySelector("#unity-progress-bar-full").style.width=100*p+"%";}).then(()=>{document.querySelector("#unity-loading-bar").style.display="none";}).catch(alert);};document.body.appendChild(sc);<\/script></body></html>`},
+  {id:"BazookaBoy",name:"Bazooka Boy",category:"Action",color:"#2a0d00",color2:"#5c1a00",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/bubbls/youtube-playables@main/bazooka-boy/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><!doctype html><head><base href="https://cdn.jsdelivr.net/gh/bubbls/youtube-playables@main/bazooka-boy/"><script src="https://cdn.jsdelivr.net/gh/bubbls/youtube-playables@main/ytgame.js"><\/script><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>body{overflow-y:none;margin:0;width:100%;position:fixed;background:#ff4e21;}#loading{width:100vw;height:100vh;background:#ff4e21;display:flex;justify-content:center;align-items:center;flex-direction:column;margin:0 auto;}#loading_logo{text-align:center;width:50%;height:fit-content;}#loading_bar{width:50%;height:11px;background:rgba(0,0,0,.25);margin-top:100px;display:flex;}#loading_bar_progress{width:0%;height:11px;}#loading_text{color:white;}</style></head><body><canvas id="canvas" style="position:absolute;top:0;left:0;display:none;"></canvas><div id="loading"><img id="loading_logo" src="assets/2d/loading/Loading_Logo.png" alt="Logo"><div id="loading_bar"><img id="loading_bar_progress" src="assets/2d/loading/Loading_Bar_Full.png" alt="Bar"></div><h3 id="loading_text">Loading...</h3></div><script defer src="vendor.f0ea44553244713d397b.js"><\/script><script defer src="main.5889165dfcd7922a0793.js"><\/script></body>`},
+  {id:"BasketRandom",name:"Basket Random",category:"Sports",color:"#1a0d00",color2:"#3d2000",html:`<script>(function(){var _base="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/";function _abs(u){if(!u||typeof u!=="string")return u;if(/^(https?:|blob:|data:|\/\/|#)/.test(u))return u;if(u.startsWith("/"))return u;return _base+u;}var _ox=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u,a,us,pw){return _ox.call(this,m,_abs(u),a,us,pw);};var _of=window.fetch;window.fetch=function(i,o){if(typeof i==="string")i=_abs(i);return _of.call(window,i,o);};})();<\/script><html><head><meta charset="UTF-8"><title>Basket Random</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/style.css" type="text/css"></head><body><script src="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/box2d.js"><\/script><script src="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/suppoortcheck.js"><\/script><script src="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/offclient.js" type="module"><\/script><script src="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/main.js" type="module"><\/script><script src="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/registersw.js" type="module"><\/script><script src="https://cdn.jsdelivr.net/gh/bubbls/ruffle@1520d90d7b2994737acd8f7a633d018f63c22ca7/api.js"><\/script></body></html>`},
 ];
 
 const STREAMS = [
@@ -1027,15 +1028,16 @@ const PROXIES = [
   {name:"Overclocked Node 01",url:"http://english.assignment.student.campus.lecture.remiosenifoundation.org/"}
 ];
 
+// ── MUSIC TRACKS (will be resolved via Deezer) ──────────────────────────────
 const SP_TRACKS = [
-  {t:"SICKO MODE",a:"Travis Scott",d:312,bg:'linear-gradient(135deg,#1a0a00,#3d2200)',em:'🔥'},
-  {t:"Money So Big",a:"Yeat",d:198,bg:'linear-gradient(135deg,#0d001a,#200030)',em:'💜'},
-  {t:"Runaway",a:"Kanye West",d:545,bg:'linear-gradient(135deg,#000000,#1a1a1a)',em:'🌑'},
-  {t:"XO TOUR Llif3",a:"Lil Uzi Vert",d:192,bg:'linear-gradient(135deg,#001a1a,#003d3d)',em:'🌊'},
-  {t:"Butterfly Effect",a:"Travis Scott",d:230,bg:'linear-gradient(135deg,#0a1a00,#1a3000)',em:'🦋'},
-  {t:"Afterlife",a:"Ken Carson",d:155,bg:'linear-gradient(135deg,#1a0005,#3d000f)',em:'⚡'},
-  {t:"Whole Lotta Red",a:"Playboi Carti",d:277,bg:'linear-gradient(135deg,#1a0000,#4d0000)',em:'🔴'},
-  {t:"r&b smoothed out",a:"21 Savage",d:267,bg:'linear-gradient(135deg,#001a0d,#003d1a)',em:'🎸'},
+  {t:"SICKO MODE",       a:"Travis Scott",   bg:'linear-gradient(135deg,#1a0a00,#3d2200)', em:'🔥'},
+  {t:"Money So Big",     a:"Yeat",           bg:'linear-gradient(135deg,#0d001a,#200030)', em:'💜'},
+  {t:"Runaway",          a:"Kanye West",     bg:'linear-gradient(135deg,#000000,#1a1a1a)', em:'🌑'},
+  {t:"XO TOUR Llif3",   a:"Lil Uzi Vert",   bg:'linear-gradient(135deg,#001a1a,#003d3d)', em:'🌊'},
+  {t:"Butterfly Effect", a:"Travis Scott",   bg:'linear-gradient(135deg,#0a1a00,#1a3000)', em:'🦋'},
+  {t:"Afterlife",        a:"Ken Carson",     bg:'linear-gradient(135deg,#1a0005,#3d000f)', em:'⚡'},
+  {t:"Whole Lotta Red",  a:"Playboi Carti",  bg:'linear-gradient(135deg,#1a0000,#4d0000)', em:'🔴'},
+  {t:"Knife Talk",       a:"Drake",          bg:'linear-gradient(135deg,#001a0d,#003d1a)', em:'🎸'},
 ];
 
 const THEMES = {
@@ -1064,7 +1066,7 @@ const DAILY_CHALLENGES = [
   {title:"Escape in Schoolboy Runaway",desc:"See how far you can run today",gameId:"SchoolboyRunaway"},
 ];
 
-// ── DOM REFS (cached) ────────────────────────────────────────────────────────
+// ── DOM REFS ─────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const $q = (sel,ctx=document) => ctx.querySelector(sel);
 const $all = (sel,ctx=document) => ctx.querySelectorAll(sel);
@@ -1082,7 +1084,8 @@ const DOM = {
   retryBtn: $('RETRY_BTN'), proxyBtnErr: $('PROXY_BTN'), errCloseBtn: $('ERR_CLOSE_BTN'),
   sp: $('SP'), spPlay: $('SP_PLAY'), spPrev: $('SP_PREV'), spNext: $('SP_NEXT'), spClose: $('SP_CLOSE'),
   spArt: $('sp-art-inner'), spTrack: $('sp-track'), spArtist: $('sp-artist'),
-  spCur: $('sp-cur'), spDur: $('sp-dur'), spFill: $('sp-fill'),
+  spCur: $('sp-cur'), spDur: $('sp-dur'), spFill: $('sp-fill'), spStatus: $('sp-status'),
+  spBarClick: $('sp-bar-click'),
   ach: $('ACHIEVEMENT'), achIcon: $('ACH_ICON'), achTitle: $('ACH_TITLE'), achSub: $('ACH_SUB'),
   gcount: $('GCOUNT'), favCount: $('FAV_COUNT'), xpStat: $('XP_STAT'), lvlStat: $('LVL_STAT'),
   xpFill: $('XP_FILL'), xpLbl: $('XP_LBL'), xpNext: $('XP_NEXT'),
@@ -1128,15 +1131,8 @@ function setCursorColor(c){if(DOM.curPath)DOM.curPath.setAttribute('fill',c);}
   const cv=DOM.particles, ctx=cv.getContext('2d');
   let pts=[], W=0, H=0, raf=null;
   const N=55;
-  function resize(){
-    W=cv.width=window.innerWidth;
-    H=cv.height=window.innerHeight;
-  }
-  function spawn(){
-    return{x:Math.random()*W,y:Math.random()*H,
-      vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,
-      r:Math.random()*1.5+.3,o:Math.random()*.35+.05};
-  }
+  function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+  function spawn(){return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.3,o:Math.random()*.35+.05};}
   function tick(){
     ctx.clearRect(0,0,W,H);
     const acc=getComputedStyle(document.documentElement).getPropertyValue('--a').trim()||'#00e5ff';
@@ -1144,25 +1140,14 @@ function setCursorColor(c){if(DOM.curPath)DOM.curPath.setAttribute('fill',c);}
       p.x+=p.vx; p.y+=p.vy;
       if(p.x<0)p.x=W; if(p.x>W)p.x=0;
       if(p.y<0)p.y=H; if(p.y>H)p.y=0;
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle=acc;
-      ctx.globalAlpha=p.o;
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=acc; ctx.globalAlpha=p.o; ctx.fill();
     }
     ctx.globalAlpha=1;
     raf=requestAnimationFrame(tick);
   }
-  function start(){
-    if(raf)return;
-    resize();
-    pts=Array.from({length:N},spawn);
-    tick();
-  }
-  function stop(){
-    if(raf){cancelAnimationFrame(raf);raf=null;}
-    ctx.clearRect(0,0,W,H);
-  }
+  function start(){if(raf)return;resize();pts=Array.from({length:N},spawn);tick();}
+  function stop(){if(raf){cancelAnimationFrame(raf);raf=null;}ctx.clearRect(0,0,W,H);}
   window.addEventListener('resize',resize,{passive:true});
   window.Particles={start,stop};
   start();
@@ -1172,9 +1157,7 @@ function setCursorColor(c){if(DOM.curPath)DOM.curPath.setAttribute('fill',c);}
 function xpForLevel(l){return l*100;}
 function getLevel(xp){let l=1,rem=xp;while(rem>=xpForLevel(l)){rem-=xpForLevel(l);l++;}return{level:l,rem,need:xpForLevel(l)};}
 function addXP(amount){
-  State.xp+=amount;
-  Storage.set('xp',State.xp);
-  updateXPUI();
+  State.xp+=amount; Storage.set('xp',State.xp); updateXPUI();
   const {level}=getLevel(State.xp);
   if(level>=5) checkAchievement('level5');
 }
@@ -1211,7 +1194,6 @@ function showAchievement(def){
 // ── THEME ─────────────────────────────────────────────────────────────────────
 function applyTheme(name){
   const t=THEMES[name];if(!t)return;
-  const r=document.documentElement;
   document.body.style.background=t.bg;
   DOM.app.style.background=t.bg;
   setAccent(t.a,t.a2);
@@ -1230,7 +1212,6 @@ function setAccent(a,a2){
 }
 
 // ── DISGUISE / UNLOCK ─────────────────────────────────────────────────────────
-let _tyTimer=null;
 function doUnlock(){
   if(State.unlocked)return;
   State.unlocked=true;
@@ -1239,10 +1220,7 @@ function doUnlock(){
   DOM.app.classList.add('on');
   renderAll();
   applySettings();
-  if(State.settings.panel){
-    const last=Storage.get('lastPanel','P_HOME');
-    switchPanel(last,false);
-  }
+  if(State.settings.panel){const last=Storage.get('lastPanel','P_HOME');switchPanel(last,false);}
 }
 function goDisguise(){
   State.unlocked=false;
@@ -1275,23 +1253,17 @@ function buildCard(g, size='normal'){
   const card=document.createElement('div');
   card.className='gc';
   card.dataset.id=g.id;
-  card.dataset.cat=g.category;
-  card.dataset.name=g.name.toLowerCase();
-
   const grad=`linear-gradient(135deg,${g.color},${g.color2})`;
   const stars=size==='normal'?`<div class="g-rating" data-id="${g.id}">
     ${[1,2,3,4,5].map(i=>`<span class="g-star${i<=rating?' lit':''}" data-r="${i}">★</span>`).join('')}
   </div>`:'';
-
   card.innerHTML=`
     <div class="g-thumb">
       <div class="g-grad" style="background:${grad}"></div>
       <div class="g-fb"><div class="g-fb-t">${g.name}</div></div>
       <div class="g-ov">
         <div class="g-play">▶</div>
-        <div class="g-star-btn${isFav?' fav':''}" data-id="${g.id}" title="${isFav?'Unfavorite':'Favorite'}">
-          ${isFav?'★':'☆'}
-        </div>
+        <div class="g-star-btn${isFav?' fav':''}" data-id="${g.id}" title="${isFav?'Unfavorite':'Favorite'}">${isFav?'★':'☆'}</div>
       </div>
     </div>
     <div class="g-info">
@@ -1299,31 +1271,18 @@ function buildCard(g, size='normal'){
       <div class="g-cat">${g.category}</div>
       ${stars}
     </div>`;
-
-  // Play button
-  card.querySelector('.g-play').addEventListener('click',e=>{
-    e.stopPropagation();
-    launchGame(g);
-  });
-  // Star button
-  card.querySelector('.g-star-btn').addEventListener('click',e=>{
-    e.stopPropagation();
-    toggleFavorite(g.id);
-  });
-  // Rating stars
+  card.querySelector('.g-play').addEventListener('click',e=>{e.stopPropagation();launchGame(g);});
+  card.querySelector('.g-star-btn').addEventListener('click',e=>{e.stopPropagation();toggleFavorite(g.id);});
   if(size==='normal'){
     card.querySelectorAll('.g-star').forEach(s=>{
       s.addEventListener('click',e=>{
         e.stopPropagation();
         const r=parseInt(s.dataset.r);
-        State.ratings[g.id]=r;
-        Storage.set('ratings',State.ratings);
-        // update only this card's stars
+        State.ratings[g.id]=r; Storage.set('ratings',State.ratings);
         card.querySelectorAll('.g-star').forEach((st,i)=>st.classList.toggle('lit',i<r));
       });
     });
   }
-  // Whole card click
   card.addEventListener('click',()=>launchGame(g));
   return card;
 }
@@ -1342,20 +1301,16 @@ function buildHCard(g){
 
 // ── TOGGLE FAVORITE ───────────────────────────────────────────────────────────
 function toggleFavorite(id){
-  if(State.favorites.has(id)){
-    State.favorites.delete(id);
-  } else {
+  if(State.favorites.has(id)){State.favorites.delete(id);}
+  else{
     State.favorites.add(id);
     checkAchievement('first_fav');
     if(State.favorites.size>=5)checkAchievement('five_favs');
   }
   Storage.set('favorites',[...State.favorites]);
-  // Update all cards with this id without full re-render
   $all(`.g-star-btn[data-id="${id}"]`).forEach(btn=>{
     const isFav=State.favorites.has(id);
-    btn.textContent=isFav?'★':'☆';
-    btn.classList.toggle('fav',isFav);
-    btn.title=isFav?'Unfavorite':'Favorite';
+    btn.textContent=isFav?'★':'☆'; btn.classList.toggle('fav',isFav);
   });
   DOM.favCount.textContent=State.favorites.size;
   renderFavsHome();
@@ -1377,72 +1332,40 @@ function renderAll(){
   renderProxy();
 }
 
-// Games grid with sort/filter
 function renderGames(){
-  if(!rendered.games){
-    rendered.games=true;
-  }
   const query=DOM.gsearch.value.toLowerCase().trim();
   const cat=($q('.chip.on',DOM.chips)||{}).dataset?.c||'all';
   const sort=DOM.sortSel.value;
-
   let list=[...GAMES];
-
-  // Filter by category/favorites
   if(cat==='favorites') list=list.filter(g=>State.favorites.has(g.id));
   else if(cat!=='all') list=list.filter(g=>g.category===cat);
-
-  // Filter by search
   if(query) list=list.filter(g=>g.name.toLowerCase().includes(query)||g.category.toLowerCase().includes(query));
-
-  // Sort
   switch(sort){
     case 'az': list.sort((a,b)=>a.name.localeCompare(b.name)); break;
     case 'za': list.sort((a,b)=>b.name.localeCompare(a.name)); break;
     case 'cat': list.sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name)); break;
-    case 'recent': {
-      const order=State.recent;
-      list.sort((a,b)=>{
-        const ai=order.indexOf(a.id), bi=order.indexOf(b.id);
-        if(ai===-1&&bi===-1)return 0;
-        if(ai===-1)return 1; if(bi===-1)return -1;
-        return ai-bi;
-      }); break;
-    }
+    case 'recent': {const order=State.recent;list.sort((a,b)=>{const ai=order.indexOf(a.id),bi=order.indexOf(b.id);if(ai===-1&&bi===-1)return 0;if(ai===-1)return 1;if(bi===-1)return -1;return ai-bi;});break;}
     case 'fav': list.sort((a,b)=>(State.favorites.has(b.id)?1:0)-(State.favorites.has(a.id)?1:0)); break;
     case 'rating': list.sort((a,b)=>(State.ratings[b.id]||0)-(State.ratings[a.id]||0)); break;
   }
-
   DOM.ggrid.innerHTML='';
   const compact=State.settings.compact;
   DOM.ggrid.closest('.panel')?.classList.toggle('compact',compact);
-
-  if(list.length===0){
-    DOM.ggridEmpty.style.display='flex';
-  } else {
-    DOM.ggridEmpty.style.display='none';
-    list.forEach(g=>DOM.ggrid.appendChild(buildCard(g,'normal')));
-  }
+  if(list.length===0){DOM.ggridEmpty.style.display='flex';}
+  else{DOM.ggridEmpty.style.display='none';list.forEach(g=>DOM.ggrid.appendChild(buildCard(g,'normal')));}
 }
 
 function renderFavsHome(){
   DOM.favQgrid.innerHTML='';
   const favs=GAMES.filter(g=>State.favorites.has(g.id));
-  if(favs.length===0){
-    DOM.favEmpty.style.display='flex';
-  } else {
-    DOM.favEmpty.style.display='none';
-    favs.forEach(g=>DOM.favQgrid.appendChild(buildCard(g,'mini')));
-  }
+  if(favs.length===0){DOM.favEmpty.style.display='flex';}
+  else{DOM.favEmpty.style.display='none';favs.forEach(g=>DOM.favQgrid.appendChild(buildCard(g,'mini')));}
 }
 
 function renderRecent(){
   DOM.recentGrid.innerHTML='';
   const recGames=State.recent.map(id=>GAMES.find(g=>g.id===id)).filter(Boolean);
-  if(recGames.length===0){
-    DOM.recentSection.style.display='none';
-    return;
-  }
+  if(recGames.length===0){DOM.recentSection.style.display='none';return;}
   DOM.recentSection.style.display='block';
   recGames.forEach(g=>DOM.recentGrid.appendChild(buildHCard(g)));
 }
@@ -1469,10 +1392,7 @@ function renderDaily(){
   const ch=DAILY_CHALLENGES[idx];
   DOM.dailyTitle.textContent=ch.title;
   DOM.dailyDesc.textContent=ch.desc;
-  DOM.dailyBtn.onclick=()=>{
-    const g=GAMES.find(x=>x.id===ch.gameId);
-    if(g){launchGame(g);checkAchievement('daily');}
-  };
+  DOM.dailyBtn.onclick=()=>{const g=GAMES.find(x=>x.id===ch.gameId);if(g){launchGame(g);checkAchievement('daily');}};
 }
 
 function renderStreams(){
@@ -1490,14 +1410,11 @@ function renderStreams(){
         <div class="sc-name">${s.name}</div>
         <div class="sc-desc">${s.desc}</div>
         <div class="sc-tag" style="color:${s.tc};border-color:${s.tc}44;background:${s.tbg}">
-          <div class="sp-dot" style="background:${s.tc}"></div>Opens in viewer
+          <div class="sp-dot" style="background:${s.tc}"></div>Opens in new tab ↗
         </div>
       </div>`;
-    c.addEventListener('click',()=>{
-      DOM.gTitle.textContent=s.name;
-      DOM.gFrame.src=s.url;
-      showModal(false); // no loading screen for slides
-    });
+    // ── FIX: open in new tab instead of inside the app ──
+    c.addEventListener('click',()=>window.open(s.url,'_blank'));
     DOM.streamGrid.appendChild(c);
   });
 }
@@ -1533,31 +1450,19 @@ const LOADING_MSGS=['Connecting...','Bypassing restrictions...','Launching engin
 
 function launchGame(g){
   State.currentGame=g;
-  // Track recent & achievements
   addToRecent(g.id);
   const totalPlays=Storage.get('totalPlays',0)+1;
   Storage.set('totalPlays',totalPlays);
   if(totalPlays===1)checkAchievement('first_game');
   if(totalPlays===10)checkAchievement('ten_games');
   addXP(15);
-
-  // Revoke old blob
   if(State.blobUrl){URL.revokeObjectURL(State.blobUrl);State.blobUrl=null;}
-
   DOM.gTitle.textContent=g.name;
-
-  // Build blob
   const blob=new Blob([g.html],{type:'text/html'});
   State.blobUrl=URL.createObjectURL(blob);
-
   showModal(true);
   DOM.gFrame.src=State.blobUrl;
-
-  // Spotify HUD
-  if(State.settings.hud){
-    DOM.sp.classList.add('on');
-    spPlay();
-  }
+  if(State.settings.hud){DOM.sp.classList.add('on');spAutoPlay();}
   if(State.settings.fs)setTimeout(fsGame,900);
 }
 
@@ -1565,40 +1470,22 @@ function showModal(withLoading=true){
   DOM.gm.style.display='flex';
   DOM.gm.classList.remove('closing');
   DOM.gError.classList.remove('show');
-
   if(withLoading){
     DOM.gLoading.style.opacity='1';
     DOM.gLoading.classList.remove('gone');
     DOM.gLoading.style.display='flex';
-
-    // Rotate loading messages
     let msgIdx=0;
     DOM.glMsg.textContent=LOADING_MSGS[0];
     clearInterval(loadingMsgTimer);
-    loadingMsgTimer=setInterval(()=>{
-      msgIdx=(msgIdx+1)%LOADING_MSGS.length;
-      DOM.glMsg.textContent=LOADING_MSGS[msgIdx];
-    },1500);
-
-    // Reset progress bar
+    loadingMsgTimer=setInterval(()=>{msgIdx=(msgIdx+1)%LOADING_MSGS.length;DOM.glMsg.textContent=LOADING_MSGS[msgIdx];},1500);
     const fill=DOM.gLoading.querySelector('#GL-FILL');
     if(fill){fill.style.animation='none';void fill.offsetWidth;fill.style.animation='glFill 5s ease-out forwards';}
-
-    // Error timeout: 6s
     clearTimeout(errorTimeoutTimer);
-    errorTimeoutTimer=setTimeout(()=>{
-      if(!DOM.gLoading.classList.contains('gone'))showGameError();
-    },8000);
-
-    // iframe load event
+    errorTimeoutTimer=setTimeout(()=>{if(!DOM.gLoading.classList.contains('gone'))showGameError();},8000);
     const onLoad=()=>{
-      clearInterval(loadingMsgTimer);
-      clearTimeout(errorTimeoutTimer);
+      clearInterval(loadingMsgTimer);clearTimeout(errorTimeoutTimer);
       DOM.glMsg.textContent='Ready!';
-      setTimeout(()=>{
-        DOM.gLoading.style.opacity='0';
-        setTimeout(()=>{DOM.gLoading.classList.add('gone');DOM.gLoading.style.display='none';},400);
-      },300);
+      setTimeout(()=>{DOM.gLoading.style.opacity='0';setTimeout(()=>{DOM.gLoading.classList.add('gone');DOM.gLoading.style.display='none';},400);},300);
       DOM.gFrame.removeEventListener('load',onLoad);
     };
     DOM.gFrame.addEventListener('load',onLoad);
@@ -1622,8 +1509,7 @@ function closeGame(){
     DOM.gm.classList.remove('closing');
     DOM.gError.classList.remove('show');
     DOM.gLoading.classList.remove('gone');
-    clearInterval(loadingMsgTimer);
-    clearTimeout(errorTimeoutTimer);
+    clearInterval(loadingMsgTimer);clearTimeout(errorTimeoutTimer);
     DOM.gFrame.src='about:blank';
     if(State.blobUrl){URL.revokeObjectURL(State.blobUrl);State.blobUrl=null;}
     if(document.fullscreenElement)document.exitFullscreen();
@@ -1631,79 +1517,218 @@ function closeGame(){
   closeHUD();
 }
 
-function retryGame(){
-  DOM.gError.classList.remove('show');
-  if(State.currentGame)launchGame(State.currentGame);
-}
-
+function retryGame(){DOM.gError.classList.remove('show');if(State.currentGame)launchGame(State.currentGame);}
 function fsGame(){
   const w=$('G-WRAP');
-  if(!document.fullscreenElement)
-    (w.requestFullscreen||w.webkitRequestFullscreen||function(){}).call(w);
-  else
-    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  if(!document.fullscreenElement)(w.requestFullscreen||w.webkitRequestFullscreen||function(){}).call(w);
+  else(document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
 }
 
-// ── MUTE ─────────────────────────────────────────────────────────────────────
 function toggleMute(){
   State.muted=!State.muted;
   DOM.muteBtn.textContent=State.muted?'🔇':'🔊';
   DOM.muteBtn.classList.toggle('muted',State.muted);
-  // Try to mute iframe
-  try{
-    const ifrWin=DOM.gFrame.contentWindow;
-    if(ifrWin){
-      ifrWin.postMessage({type:'peak_mute',muted:State.muted},'*');
-    }
-  }catch{}
-  // Mute indicator
+  try{DOM.gFrame.contentWindow.postMessage({type:'peak_mute',muted:State.muted},'*');}catch{}
   DOM.muteInd.textContent=State.muted?'🔇 Muted':'🔊 Unmuted';
   DOM.muteInd.classList.add('show');
   clearTimeout(DOM.muteInd._t);
   DOM.muteInd._t=setTimeout(()=>DOM.muteInd.classList.remove('show'),2000);
 }
 
-// ── SPOTIFY HUD ───────────────────────────────────────────────────────────────
-let _si=0, _sp=false, _ss=0, _stmr=null;
-function _sf(){return SP_TRACKS[_si%SP_TRACKS.length];}
-function _fmt(s){const m=Math.floor(s/60),sc=Math.floor(s%60);return `${m}:${sc<10?'0':''}${sc}`;}
-function _spUI(){
-  const t=_sf();
-  DOM.spTrack.textContent=t.t;
-  DOM.spArtist.textContent=t.a;
-  DOM.spDur.textContent=_fmt(t.d);
-  DOM.spCur.textContent=_fmt(_ss);
-  DOM.spFill.style.width=Math.min(100,(_ss/t.d)*100)+'%';
-  DOM.spArt.textContent=t.em;
-  DOM.spArt.style.background=t.bg;
-  DOM.spPlay.textContent=_sp?'⏸':'▶';
-}
-function spPlay(){
-  if(_sp)return;
-  _sp=true;
-  _stmr=setInterval(()=>{
-    _ss++;
-    const t=_sf();
-    if(_ss>=t.d){_ss=0;_si=(_si+1)%SP_TRACKS.length;}
-    _spUI();
-  },1000);
-  _spUI();
-}
-function spPause(){_sp=false;clearInterval(_stmr);_stmr=null;_spUI();}
-function spToggle(){_sp?spPause():spPlay();}
-function spNext(){_si=(_si+1)%SP_TRACKS.length;_ss=0;clearInterval(_stmr);_stmr=null;if(_sp)spPlay();else _spUI();}
-function spPrev(){_ss=0;if(_si>0)_si--;clearInterval(_stmr);_stmr=null;if(_sp)spPlay();else _spUI();}
-function closeHUD(){DOM.sp.classList.remove('on');spPause();}
-_spUI();
+// ══════════════════════════════════════════════════════════════════════════════
+//  REAL MUSIC PLAYER — Deezer 30s Previews via JSONP
+// ══════════════════════════════════════════════════════════════════════════════
+const MusicPlayer = (() => {
+  let audio = new Audio();
+  let trackIdx = 0;
+  let isPlaying = false;
+  let progressTimer = null;
+  let previewCache = {}; // cache resolved preview URLs
+
+  audio.crossOrigin = 'anonymous';
+
+  // Format seconds → "m:ss"
+  function fmt(s) {
+    if(isNaN(s)||s<0) s=0;
+    const m = Math.floor(s/60), sc = Math.floor(s%60);
+    return `${m}:${sc<10?'0':''}${sc}`;
+  }
+
+  // Update the HUD UI from audio element state
+  function updateUI() {
+    const t = SP_TRACKS[trackIdx % SP_TRACKS.length];
+    DOM.spTrack.textContent = t.t;
+    DOM.spArtist.textContent = t.a;
+    DOM.spArt.textContent = t.em;
+    DOM.spArt.style.background = t.bg;
+    DOM.spPlay.textContent = isPlaying ? '⏸' : '▶';
+
+    const cur = audio.currentTime || 0;
+    const dur = audio.duration || 30;
+    DOM.spCur.textContent = fmt(cur);
+    DOM.spDur.textContent = fmt(dur);
+    DOM.spFill.style.width = dur > 0 ? Math.min(100, (cur/dur)*100)+'%' : '0%';
+  }
+
+  // Fetch preview URL from Deezer via JSONP (bypasses CORS)
+  function fetchPreview(track, artist) {
+    const cacheKey = `${track}|${artist}`;
+    if (previewCache[cacheKey]) return Promise.resolve(previewCache[cacheKey]);
+
+    return new Promise((resolve) => {
+      const cbName = '_dzCb' + Math.random().toString(36).slice(2,8);
+      const q = encodeURIComponent(`track:"${track}" artist:"${artist}"`);
+      const script = document.createElement('script');
+
+      const timeout = setTimeout(() => {
+        delete window[cbName];
+        script.remove();
+        resolve(null); // timed out
+      }, 8000);
+
+      window[cbName] = (data) => {
+        clearTimeout(timeout);
+        delete window[cbName];
+        script.remove();
+        let url = null;
+        if (data && data.data && data.data.length > 0) {
+          // prefer exact match by artist name
+          const results = data.data;
+          const match = results.find(r =>
+            r.artist && r.artist.name.toLowerCase().includes(artist.toLowerCase().split(' ')[0])
+          ) || results[0];
+          url = match && match.preview ? match.preview : null;
+        }
+        if (url) previewCache[cacheKey] = url;
+        resolve(url);
+      };
+
+      script.src = `https://api.deezer.com/search?q=${q}&limit=5&output=jsonp&callback=${cbName}`;
+      document.head.appendChild(script);
+    });
+  }
+
+  // Load and play the current track index
+  async function loadTrack(autoplay = false) {
+    const t = SP_TRACKS[trackIdx % SP_TRACKS.length];
+    DOM.spStatus.textContent = 'loading…';
+    updateUI();
+
+    audio.pause();
+    audio.src = '';
+    isPlaying = false;
+    clearInterval(progressTimer);
+
+    const url = await fetchPreview(t.t, t.a);
+
+    if (!url) {
+      // No preview found — skip to next after 2s
+      DOM.spStatus.textContent = 'no preview';
+      if (autoplay) setTimeout(() => nextTrack(), 2000);
+      return;
+    }
+
+    audio.src = url;
+    DOM.spStatus.textContent = 'deezer';
+
+    if (autoplay) {
+      try {
+        await audio.play();
+        isPlaying = true;
+        startProgressTimer();
+      } catch(e) {
+        isPlaying = false;
+      }
+    }
+    updateUI();
+  }
+
+  function startProgressTimer() {
+    clearInterval(progressTimer);
+    progressTimer = setInterval(updateUI, 500);
+  }
+
+  // Audio events
+  audio.addEventListener('ended', () => {
+    nextTrack();
+  });
+  audio.addEventListener('play', () => {
+    isPlaying = true;
+    DOM.spPlay.textContent = '⏸';
+    startProgressTimer();
+  });
+  audio.addEventListener('pause', () => {
+    isPlaying = false;
+    DOM.spPlay.textContent = '▶';
+    clearInterval(progressTimer);
+    updateUI();
+  });
+  audio.addEventListener('timeupdate', updateUI);
+  audio.addEventListener('loadedmetadata', updateUI);
+
+  // Progress bar click to seek
+  DOM.spBarClick.addEventListener('click', (e) => {
+    if(!audio.duration) return;
+    const rect = DOM.spBarClick.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = pct * audio.duration;
+    updateUI();
+  });
+
+  function nextTrack() {
+    trackIdx = (trackIdx + 1) % SP_TRACKS.length;
+    loadTrack(true);
+  }
+
+  function prevTrack() {
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+    } else {
+      trackIdx = (trackIdx - 1 + SP_TRACKS.length) % SP_TRACKS.length;
+      loadTrack(isPlaying);
+    }
+  }
+
+  async function toggle() {
+    if (!audio.src || audio.src === window.location.href) {
+      await loadTrack(true);
+      return;
+    }
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      try { await audio.play(); } catch(e) {}
+    }
+  }
+
+  function autoPlay() {
+    // Called when game launches — start music
+    if (!audio.src || audio.src === window.location.href) {
+      loadTrack(true);
+    } else if (!isPlaying) {
+      audio.play().catch(()=>{});
+    }
+  }
+
+  function stop() {
+    audio.pause();
+    isPlaying = false;
+    clearInterval(progressTimer);
+  }
+
+  // Preload current track info on init
+  updateUI();
+
+  return { toggle, next: nextTrack, prev: prevTrack, autoPlay, stop, updateUI };
+})();
+
+function spAutoPlay() { MusicPlayer.autoPlay(); }
+function closeHUD() { DOM.sp.classList.remove('on'); MusicPlayer.stop(); }
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
-function saveSetting(key,val){
-  State.settings[key]=val;
-  Storage.set('settings',State.settings);
-}
+function saveSetting(key,val){State.settings[key]=val;Storage.set('settings',State.settings);}
 function applySettings(){
   const s=State.settings;
-  // Toggles
   DOM.escTog.classList.toggle('on',s.esc);
   DOM.hudTog.classList.toggle('on',s.hud);
   DOM.fsTog.classList.toggle('on',s.fs);
@@ -1712,7 +1737,6 @@ function applySettings(){
   DOM.particleTog.classList.toggle('on',s.particles===false);
   DOM.cursorTog.classList.toggle('on',s.cursor===false);
   DOM.compactTog.classList.toggle('on',s.compact);
-  // Apply
   document.body.classList.toggle('reduce-motion',!!s.motion);
   if(s.particles===false){Particles.stop();DOM.particles.style.display='none';}
   else{Particles.start();DOM.particles.style.display='';}
@@ -1725,10 +1749,7 @@ function applySettings(){
 // Keyboard unlock
 document.addEventListener('keydown',e=>{
   if(e.key==='`'||e.key==='~'){e.preventDefault();doUnlock();return;}
-  if(e.key==='Escape'){
-    if(State.settings.esc)goDisguise();
-    return;
-  }
+  if(e.key==='Escape'){if(State.settings.esc)goDisguise();return;}
   if(!State.unlocked&&e.key.length===1&&/[a-zA-Z]/.test(e.key)){
     State.tyBuffer+=e.key.toLowerCase();
     if(State.tyBuffer.length>4)State.tyBuffer=State.tyBuffer.slice(-4);
@@ -1740,18 +1761,10 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-// FAB
 DOM.fabBtn.addEventListener('click',toggleFab);
-DOM.fabMenu.addEventListener('click',e=>{
-  const fi=e.target.closest('.fi');
-  if(fi&&fi.dataset.panel)switchPanel(fi.dataset.panel);
-});
-
-// Panic
+DOM.fabMenu.addEventListener('click',e=>{const fi=e.target.closest('.fi');if(fi&&fi.dataset.panel)switchPanel(fi.dataset.panel);});
 DOM.panicBtn.addEventListener('click',goDisguise);
 DOM.classroomBtn.addEventListener('click',()=>window.open('https://classroom.google.com','_blank'));
-
-// Game bar buttons
 DOM.muteBtn.addEventListener('click',toggleMute);
 DOM.reloadBtn.addEventListener('click',()=>{if(State.blobUrl)DOM.gFrame.src=State.blobUrl;});
 DOM.fsBtn.addEventListener('click',fsGame);
@@ -1760,13 +1773,12 @@ DOM.retryBtn.addEventListener('click',retryGame);
 DOM.proxyBtnErr.addEventListener('click',()=>{closeGame();switchPanel('P_PROXY');});
 DOM.errCloseBtn.addEventListener('click',closeGame);
 
-// Spotify
-DOM.spPlay.addEventListener('click',spToggle);
-DOM.spPrev.addEventListener('click',spPrev);
-DOM.spNext.addEventListener('click',spNext);
+// Music HUD controls
+DOM.spPlay.addEventListener('click', () => MusicPlayer.toggle());
+DOM.spPrev.addEventListener('click', () => MusicPlayer.prev());
+DOM.spNext.addEventListener('click', () => MusicPlayer.next());
 DOM.spClose.addEventListener('click',closeHUD);
 
-// Games filter/search
 DOM.gsearch.addEventListener('input',()=>renderGames());
 DOM.sortSel.addEventListener('change',()=>renderGames());
 DOM.chips.addEventListener('click',e=>{
@@ -1776,21 +1788,8 @@ DOM.chips.addEventListener('click',e=>{
   chip.classList.add('on');
   renderGames();
 });
-
-// Recent clear
-DOM.clearRecent.addEventListener('click',()=>{
-  State.recent=[];
-  Storage.del('recent');
-  renderRecent();
-});
-
-// Theme grid
-DOM.themeGrid.addEventListener('click',e=>{
-  const tc=e.target.closest('.tc');
-  if(tc)applyTheme(tc.dataset.t);
-});
-
-// Accents
+DOM.clearRecent.addEventListener('click',()=>{State.recent=[];Storage.del('recent');renderRecent();});
+DOM.themeGrid.addEventListener('click',e=>{const tc=e.target.closest('.tc');if(tc)applyTheme(tc.dataset.t);});
 DOM.accents.addEventListener('click',e=>{
   const acc=e.target.closest('.acc');
   if(!acc)return;
@@ -1799,7 +1798,6 @@ DOM.accents.addEventListener('click',e=>{
   setAccent(acc.dataset.a,acc.dataset.a2);
 });
 
-// Settings toggles
 function bindTog(el,key,cb){
   el.addEventListener('click',()=>{
     el.classList.toggle('on');
@@ -1817,38 +1815,19 @@ bindTog(DOM.particleTog,'particlesOff',v=>{
   if(v){Particles.stop();DOM.particles.style.display='none';}
   else{Particles.start();DOM.particles.style.display='';}
 });
-bindTog(DOM.cursorTog,'cursorOff',v=>{
-  saveSetting('cursor',!v);
-  DOM.cur.classList.toggle('hidden',v);
-});
-bindTog(DOM.compactTog,'compact',v=>{
-  renderGames();
-});
-
-// Tab title
+bindTog(DOM.cursorTog,'cursorOff',v=>{saveSetting('cursor',!v);DOM.cur.classList.toggle('hidden',v);});
+bindTog(DOM.compactTog,'compact',()=>renderGames());
 DOM.tabSel.addEventListener('change',()=>document.title=DOM.tabSel.value);
-
-// Settings data buttons
 DOM.clearFavs.addEventListener('click',()=>{
-  State.favorites.clear();
-  Storage.del('favorites');
+  State.favorites.clear();Storage.del('favorites');
   DOM.favCount.textContent=0;
   $all('.g-star-btn').forEach(b=>{b.textContent='☆';b.classList.remove('fav');});
-  renderFavsHome();
-  renderGames();
+  renderFavsHome();renderGames();
 });
-DOM.resetXP.addEventListener('click',()=>{
-  State.xp=0;
-  Storage.set('xp',0);
-  updateXPUI();
-});
+DOM.resetXP.addEventListener('click',()=>{State.xp=0;Storage.set('xp',0);updateXPUI();});
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-// Load saved settings
 applySettings();
-// Init Spotify UI
-_spUI();
-// Set initial stats
 DOM.gcount.textContent=GAMES.length;
 DOM.favCount.textContent=State.favorites.size;
 updateXPUI();
